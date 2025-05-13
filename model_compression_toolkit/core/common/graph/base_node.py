@@ -134,6 +134,12 @@ class BaseNode:
         """
         return self._is_single_quant_mode(ActivationQuantizationMode.QUANT)
 
+    def is_fln_quantization_enabled(self) -> bool:
+        """
+        Returns: Whether fln node activation quantization is enabled or not.
+        """
+        return self._is_single_quant_mode(ActivationQuantizationMode.FLN_QUANT)
+
     def is_quantization_preserving(self) -> bool:
         """
         Returns: Whether node activation quantization information is preserved from its inputs.
