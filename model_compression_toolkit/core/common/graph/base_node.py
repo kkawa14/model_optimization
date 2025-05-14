@@ -134,6 +134,7 @@ class BaseNode:
         """
         return self._is_single_quant_mode(ActivationQuantizationMode.QUANT)
 
+
     def is_quantization_preserving(self) -> bool:
         """
         Returns: Whether node activation quantization information is preserved from its inputs.
