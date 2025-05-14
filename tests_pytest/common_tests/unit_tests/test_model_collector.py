@@ -55,6 +55,7 @@ class TestStatisticsCollectors:
         # Set up a fake node with activation quantization enabled and prior_info attributes.
         node = Mock()
         node.is_activation_quantization_enabled.return_value = True
+        node.is_fln_quantization_enabled.return_value = False
         node.type = DummyLayer
         node.prior_info = Mock(min_output=-1, max_output=9)
 
@@ -68,12 +69,28 @@ class TestStatisticsCollectors:
         """
         node = Mock()
         node.is_activation_quantization_enabled.return_value = False
+        node.is_fln_quantization_enabled.return_value = False
         node.type = DummyLayer
         # Even if prior_info exists, it should not be used.
         node.prior_info = Mock(min_output=None, max_output=None)
 
         collector = create_stats_collector_for_node(node, fw_info_mock)
         assert isinstance(collector, NoStatsCollector)
+
+    def test_create_stats_collector_for_fln_node_activation_enabled(self, fw_info_mock):
+        """
+        Verify that for a node with activation quantization enabled,
+        create_stats_collector_for_node returns a StatsCollector instance.
+        """
+        # Set up a fake node with activation quantization enabled and prior_info attributes.
+        node = Mock()
+        node.is_activation_quantization_enabled.return_value = False
+        node.is_fln_quantization_enabled.return_value = True
+        node.type = DummyLayer
+        node.prior_info = Mock(min_output=-1, max_output=9)
+
+        collector = create_stats_collector_for_node(node, fw_info_mock)
+        assert isinstance(collector, StatsCollector)
 
     def test_create_tensor2node_assigns_stats_collector(self, fw_info_mock):
         """
