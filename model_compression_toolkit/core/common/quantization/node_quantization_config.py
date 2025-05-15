@@ -127,6 +127,18 @@ class NodeActivationQuantizationConfig(BaseNodeQuantizationConfig):
         self.shift_negative_threshold_recalculation = qc.shift_negative_threshold_recalculation
         self.concat_threshold_update = qc.concat_threshold_update
 
+    def set_op_quantization_cfg(self, op_cfg: OpQuantizationConfig):
+        """
+        Sets the OpQuantizationConfig for the node.
+
+        Args:
+            op_cfg: OpQuantizationConfig to set the OpQuantizationConfig for.
+        """
+        self.activation_quantization_method = op_cfg.activation_quantization_method
+        self.activation_nbits = op_cfg.activation_nbits
+        self.signedness = op_cfg.signedness
+        self.activation_quantization_params_fn = op_cfg.activation_quantization_params_fn(activation_quantization_method=self.activation_quantization_method)
+
     @property
     def enable_activation_quantization(self):
         return self.quant_mode == ActivationQuantizationMode.QUANT
@@ -206,7 +218,7 @@ class NodeActivationQuantizationConfig(BaseNodeQuantizationConfig):
             activation_params: Dictionary that contains weight quantization params.
 
         """
-        assert self.quant_mode == ActivationQuantizationMode.QUANT
+        assert self.quant_mode == ActivationQuantizationMode.QUANT or self.quant_mode == ActivationQuantizationMode.FLN_QUANT
         for param_name, param_value in activation_params.items():
             self.activation_quantization_params[param_name] = param_value
 

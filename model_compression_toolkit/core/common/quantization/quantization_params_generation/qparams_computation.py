@@ -97,7 +97,9 @@ def calculate_quantization_params(graph: Graph,
                                        target_nodes=nodes_for_hmse)
         hessian_info_service.fetch_hessian(request)
 
-    for n in tqdm(nodes_list, "Calculating quantization parameters"):  # iterate only nodes that we should compute their thresholds
+    #for n in tqdm(nodes_list, "Calculating quantization parameters"):  # iterate only nodes that we should compute their thresholds
+    for n in nodes_list:
+        print('##### n', n)
         for candidate_qc in n.candidates_quantization_cfg:
             for attr in n.get_node_weights_attributes():
                 if n.is_weights_quantization_enabled(attr):
@@ -135,7 +137,13 @@ def calculate_quantization_params(graph: Graph,
                     attr_cfg.weights_channels_axis = (output_channels_axis, attr_cfg.weights_channels_axis[1])
                     attr_cfg.set_weights_quantization_param(weights_params)
 
-            if n.is_activation_quantization_enabled():
+            print('mode', candidate_qc.activation_quantization_cfg.quant_mode)
+            print("aa", graph.get_out_stats_collector(n))
+            from model_compression_toolkit.core.common.quantization.node_quantization_config import \
+                ActivationQuantizationMode
+            if candidate_qc.activation_quantization_cfg.quant_mode == ActivationQuantizationMode.FLN_QUANT:
+                print("FLN_QUANT!")
+            if n.is_activation_quantization_enabled() or n.is_fln_activation_quantization_enabled():
                 # If node's activations should be quantized as well, we compute its activation quantization parameters
                 activation_params = get_activations_qparams(
                     activation_quant_cfg=candidate_qc.activation_quantization_cfg,
