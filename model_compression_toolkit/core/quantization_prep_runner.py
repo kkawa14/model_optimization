@@ -75,12 +75,6 @@ def quantization_preparation_runner(graph: Graph,
     for _data in tqdm(representative_data_gen(), "Statistics Collection"):
         mi.infer(_data)
 
-    print("after collect")
-    for n in graph.nodes():
-        out_stats_container = graph.get_out_stats_collector(n) 
-        if n.is_fln_quantization_enabled():
-            print("fln out_stats_container : "),out_stats_container
-
     if tb_w is not None:
         tb_w.add_graph(graph, 'after_statistic_collection')
 
