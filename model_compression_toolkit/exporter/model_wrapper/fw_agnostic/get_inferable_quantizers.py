@@ -1,4 +1,4 @@
-# Copyright 2023 Sony Semiconductor Israel, Inc. All rights reserved.
+# Copyright 2025 Sony Semiconductor Israel, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ def get_inferable_quantizers(node: BaseNode,
             weight_quantizer = get_weights_quantizer_for_node(node, attr)
             weight_quantizers[attr] = weight_quantizer
 
-    if node.is_activation_quantization_enabled():
+    if node.is_activation_quantization_enabled() or node.is_fln_quantization():
         num_of_outputs = len(node.output_shape) if isinstance(node.output_shape, list) else 1
         activation_quantizers = [get_activations_quantizer_for_node(node)] * num_of_outputs
 
