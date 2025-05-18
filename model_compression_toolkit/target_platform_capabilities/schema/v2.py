@@ -91,8 +91,6 @@ class OperatorSetNames(str, Enum):
     STRIDED_SLICE = "StridedSlice"
     SSD_POST_PROCESS = "SSDPostProcess"
     EXP = "Exp"
-    SIN = "Sin"
-    COS = "Cos"
 
     @classmethod
     def get_values(cls):
@@ -220,11 +218,11 @@ class TargetPlatformCapabilities(BaseModel):
         SCHEMA_VERSION (int): Version of the schema for the Target Platform Model.
     """
     default_qco: QuantizationConfigOptions
-    operator_set: Optional[Tuple[OperatorsSet, ...]] = None
-    fusing_patterns: Optional[Tuple[Fusing, ...]] = None
-    tpc_minor_version: Optional[int] = None
-    tpc_patch_version: Optional[int] = None
-    tpc_platform_type: Optional[str] = None
+    operator_set: Optional[Tuple[OperatorsSet, ...]]
+    fusing_patterns: Optional[Tuple[Fusing, ...]]
+    tpc_minor_version: Optional[int]
+    tpc_patch_version: Optional[int]
+    tpc_platform_type: Optional[str]
     add_metadata: bool = True
     name: Optional[str] = "default_tpc"
 

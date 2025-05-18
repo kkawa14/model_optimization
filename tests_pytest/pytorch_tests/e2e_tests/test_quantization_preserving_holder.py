@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import pytest
+
 import model_compression_toolkit as mct
 import torch
 from mct_quantizers import PytorchActivationQuantizationHolder, PytorchPreservingActivationQuantizationHolder
@@ -21,11 +23,9 @@ from model_compression_toolkit.target_platform_capabilities import AttributeQuan
 from mct_quantizers import QuantizationMethod
 import model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema as schema
 
-
 def representative_data_gen(shape=(3, 8, 8), num_inputs=1, batch_size=2, num_iter=1):
     for _ in range(num_iter):
         yield [torch.randn(batch_size, *shape)] * num_inputs
-
 
 def get_float_model():
     class BaseModel(torch.nn.Module):
@@ -48,8 +48,7 @@ def get_float_model():
             return x
     return BaseModel()
 
-
-def get_tpc(insert_preserving):
+def get_tpc():
     base_config = schema.OpQuantizationConfig(
         default_weight_attr_config=AttributeQuantizationConfig(),
         attr_weights_configs_mapping={},
@@ -59,7 +58,7 @@ def get_tpc(insert_preserving):
         enable_activation_quantization=True,
         quantization_preserving=False,
         signedness=Signedness.AUTO)
-
+    
     default_config = schema.OpQuantizationConfig(
         default_weight_attr_config=AttributeQuantizationConfig(),
         attr_weights_configs_mapping={},
@@ -73,7 +72,7 @@ def get_tpc(insert_preserving):
     mixed_precision_cfg_list = [base_config]
     default_configuration_options = schema.QuantizationConfigOptions(quantization_configurations=tuple([default_config]))
     mixed_precision_configuration_options = schema.QuantizationConfigOptions(quantization_configurations=tuple(mixed_precision_cfg_list),
-                                                                           base_config=base_config)
+                                                                             base_config=base_config)
 
     operator_set = []
     preserving_quantization_config = (default_configuration_options.clone_and_edit(enable_activation_quantization=False, quantization_preserving=True))
@@ -85,19 +84,13 @@ def get_tpc(insert_preserving):
 
     tpc = schema.TargetPlatformCapabilities(
         default_qco=default_configuration_options,
-        operator_set=tuple(operator_set),
-        insert_preserving_quantizers=insert_preserving)
-
+        operator_set=tuple(operator_set))
     return tpc
 
-
 def test_quantization_preserving_holder():
-    """
-    This test uses a TPC with insert_preserving_quantizer enabled and verifies that all preserving operations in the
-    model are followed by a suitable activation quantization holder with the correct attributes.
-    """
+
     float_model = get_float_model()
-    target_platform_cap = get_tpc(insert_preserving=True)
+    target_platform_cap = get_tpc()
     core_config = CoreConfig()
     
     quantized_model, _ = mct.ptq.pytorch_post_training_quantization(
@@ -110,7 +103,7 @@ def test_quantization_preserving_holder():
     # check conv
     conv_activation_holder_quantizer = quantized_model.conv_activation_holder_quantizer
     assert isinstance(conv_activation_holder_quantizer, PytorchActivationQuantizationHolder)
-
+    
     # check flatten1 (same conv)
     flatten1_activation_holder_quantizer = quantized_model.flatten1_activation_holder_quantizer
     assert isinstance(flatten1_activation_holder_quantizer, PytorchPreservingActivationQuantizationHolder)
@@ -142,47 +135,4 @@ def test_quantization_preserving_holder():
     # check fc2
     fc2_activation_holder_quantizer = quantized_model.fc2_activation_holder_quantizer
     assert isinstance(fc2_activation_holder_quantizer, PytorchActivationQuantizationHolder)
-
-
-def test_no_quantization_preserving_holder():
-    """
-    This test uses a TPC with insert_preserving_quantizer disabled and verifies that none of the preserving operations
-    in the model is connected to a preserving quantization holder.
-    """
-    float_model = get_float_model()
-    target_platform_cap = get_tpc(insert_preserving=False)
-    core_config = CoreConfig()
-
-    quantized_model, _ = mct.ptq.pytorch_post_training_quantization(
-        in_module=float_model,
-        representative_data_gen=representative_data_gen,
-        core_config=core_config,
-        target_platform_capabilities=target_platform_cap
-    )
-
-    # Check that no PytorchPreservingActivationQuantizationHolder exists in the model
-    for _, module in quantized_model.named_modules():
-        assert not isinstance(module, PytorchPreservingActivationQuantizationHolder), \
-            f"Found unexpected PytorchPreservingActivationQuantizationHolder: {module}"
-
-    # check conv
-    assert hasattr(quantized_model, 'conv_activation_holder_quantizer')
-    assert isinstance(quantized_model.conv_activation_holder_quantizer, PytorchActivationQuantizationHolder)
-
-    # check flatten1 (same conv)
-    assert not hasattr(quantized_model, 'flatten1_activation_holder_quantizer')
-
-    # check fc1
-    assert hasattr(quantized_model, 'fc1_activation_holder_quantizer')
-    assert isinstance(quantized_model.fc1_activation_holder_quantizer, PytorchActivationQuantizationHolder)
-
-    # check flatten2 (same fc1)
-    assert not hasattr(quantized_model, 'flatten2_activation_holder_quantizer')
-
-    # check dropout (same fc1)
-    assert not hasattr(quantized_model, 'dropout_activation_holder_quantizer')
-
-    # check fc2
-    assert hasattr(quantized_model, 'fc2_activation_holder_quantizer')
-    assert isinstance(quantized_model.fc2_activation_holder_quantizer, PytorchActivationQuantizationHolder)
              
