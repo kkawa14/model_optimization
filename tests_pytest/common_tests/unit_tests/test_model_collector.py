@@ -24,7 +24,13 @@ from model_compression_toolkit.core.common.graph.edge import Edge
 from model_compression_toolkit.core.common.hessian import HessianInfoService
 from model_compression_toolkit.core.common.model_collector import create_stats_collector_for_node, create_tensor2node, ModelCollector
 from tests_pytest._test_util.graph_builder_utils import build_node, DummyLayer, build_nbits_qc as build_qc
-
+from model_compression_toolkit.core.common.quantization.quantization_params_generation.lut_kmeans_params import lut_kmeans_histogram
+from model_compression_toolkit.target_platform_capabilities import AttributeQuantizationConfig, OpQuantizationConfig, \
+    Signedness
+from mct_quantizers import QuantizationMethod
+from model_compression_toolkit.core.common.quantization.node_quantization_config import \
+    NodeActivationQuantizationConfig
+from model_compression_toolkit.core import QuantizationConfig
 
 @pytest.fixture
 def fw_impl_mock():
@@ -113,6 +119,41 @@ class TestStatisticsCollectors:
         assert assigned_node is node
         assert isinstance(assigned_collector, StatsCollector)
 
+
+    # test set_op_quantization_cfg
+    def test_set_op_quantization_cfg(self):
+        a_nbits=8
+        a_enable=True
+        q_preserving=False
+        op_cfg = OpQuantizationConfig(
+            default_weight_attr_config=AttributeQuantizationConfig(),
+            attr_weights_configs_mapping={},
+            activation_quantization_method=QuantizationMethod.POWER_OF_TWO,
+            activation_n_bits=a_nbits,
+            enable_activation_quantization=a_enable,
+            quantization_preserving=q_preserving,
+            supported_input_activation_n_bits=8,
+            signedness=Signedness.AUTO
+        )
+        a_qcfg = NodeActivationQuantizationConfig(qc=QuantizationConfig(), op_cfg=op_cfg,
+                                                  activation_quantization_fn=None,
+                                                  activation_quantization_params_fn=None)
+        op_cfg2 = OpQuantizationConfig(
+            default_weight_attr_config=AttributeQuantizationConfig(),
+            attr_weights_configs_mapping={},
+            activation_quantization_method=QuantizationMethod.LUT_POT_QUANTIZER,
+            activation_n_bits=16,
+            enable_activation_quantization=a_enable,
+            quantization_preserving=q_preserving,
+            supported_input_activation_n_bits=8,
+            signedness=Signedness.SIGNED
+        )
+        # call set_op_quantization_cfg()
+        a_qcfg.set_op_quantization_cfg(op_cfg2)    
+        assert a_qcfg.activation_quantization_method == QuantizationMethod.LUT_POT_QUANTIZER
+        assert a_qcfg.activation_n_bits == 16
+        assert a_qcfg.signedness == Signedness.SIGNED
+        assert a_qcfg.activation_quantization_params_fn == lut_kmeans_histogram
 
 class TestModelCollectorInit:
     def test_assigns_stats_collectors_to_nodes(self, fw_impl_mock, fw_info_mock):
