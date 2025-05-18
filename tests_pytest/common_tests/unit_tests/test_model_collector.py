@@ -55,7 +55,8 @@ class TestStatisticsCollectors:
         # Set up a fake node with activation quantization enabled and prior_info attributes.
         node = Mock()
         node.is_activation_quantization_enabled.return_value = True
-        node.is_fln_quantization_enabled.return_value = False
+        node.is_quantization_preserving.return_value = False
+        node.is_fln_quantization.return_value = False
         node.type = DummyLayer
         node.prior_info = Mock(min_output=-1, max_output=9)
 
@@ -69,7 +70,8 @@ class TestStatisticsCollectors:
         """
         node = Mock()
         node.is_activation_quantization_enabled.return_value = False
-        node.is_fln_quantization_enabled.return_value = False
+        node.is_quantization_preserving.return_value = False
+        node.is_fln_quantization.return_value = False
         node.type = DummyLayer
         # Even if prior_info exists, it should not be used.
         node.prior_info = Mock(min_output=None, max_output=None)
@@ -77,17 +79,20 @@ class TestStatisticsCollectors:
         collector = create_stats_collector_for_node(node, fw_info_mock)
         assert isinstance(collector, NoStatsCollector)
 
-    def test_create_stats_collector_for_fln_node_activation_enabled(self, fw_info_mock):
+    def test_create_stats_collector_for_node_fln_activation_enabled(self, fw_info_mock):
         """
-        Verify that for a node with activation quantization enabled,
+        Verify that for a node with fln quantization enabled,
         create_stats_collector_for_node returns a StatsCollector instance.
+        The test for FLN activation disabled is already covered by 
+            test_create_stats_collector_for_node_activation_disabled, so it is not checked here.
         """
         # Set up a fake node with activation quantization enabled and prior_info attributes.
         node = Mock()
         node.is_activation_quantization_enabled.return_value = False
-        node.is_fln_quantization_enabled.return_value = True
+        node.is_quantization_preserving.return_value = False
+        node.is_fln_quantization.return_value = True
         node.type = DummyLayer
-        node.prior_info = Mock(min_output=-1, max_output=9)
+        node.prior_info = Mock(min_output=-8, max_output=9)
 
         collector = create_stats_collector_for_node(node, fw_info_mock)
         assert isinstance(collector, StatsCollector)
@@ -127,10 +132,15 @@ class TestModelCollectorInit:
         node3 = build_node('node3', output_shape=(None, 59))
         node3.is_activation_quantization_enabled = Mock(return_value=True)
 
+        mock_nodes_list = [node1, node2, node3]
+        for node in mock_nodes_list:
+            node.is_fln_quantization = Mock(return_value=False)
+            node.is_quantization_preserving = Mock(return_value=False)
+
         # Build a graph connecting the nodes.
         graph = Graph('g',
                       input_nodes=[node1],
-                      nodes=[node1, node2, node3],
+                      nodes=mock_nodes_list,
                       output_nodes=[OutTensor(node3, 0)],
                       edge_list=[Edge(node1, node2, 0, 0), Edge(node2, node3, 0, 0)])
         graph.set_out_stats_collector_to_node = Mock(wraps=graph.set_out_stats_collector_to_node)
@@ -169,10 +179,15 @@ class TestModelCollectorInit:
         node3.is_activation_quantization_enabled = Mock(return_value=True)
         node3.is_weights_quantization_enabled = Mock(return_value=False)
 
+        mock_nodes_list = [node1, node2, node3]
+        for node in mock_nodes_list:
+            node.is_fln_quantization = Mock(return_value=False)
+            node.is_quantization_preserving = Mock(return_value=False)
+
         # Build a graph connecting the nodes.
         graph = Graph('g',
                       input_nodes=[node1],
-                      nodes=[node1, node2, node3],
+                      nodes=mock_nodes_list,
                       output_nodes=[OutTensor(node3, 0)],
                       edge_list=[Edge(node1, node2, 0, 0), Edge(node2, node3, 0, 0)])
         graph.set_out_stats_collector_to_node = Mock(wraps=graph.set_out_stats_collector_to_node)
@@ -195,6 +210,49 @@ class TestModelCollectorInit:
         fw_impl_mock.model_builder.assert_called_once()
         assert len(calls) == 1
 
+    def test_assigns_stats_collectors_to_fln_quantization_nodes(self, fw_impl_mock, fw_info_mock):
+        """
+        Verify that ModelCollector.__init__ assigns appropriate statistics collectors to FLN_QUANT nodes in the graph.
+        """
+        # Create nodes with different fln quantization settings.
+        node1 = build_node('node1', output_shape=(None, 3, 14))
+        node1.is_fln_quantization = Mock(return_value=True)
+        node2 = build_node('node2', output_shape=(None, 2, 71))
+        node2.is_fln_quantization = Mock(return_value=False)
+        node3 = build_node('node3', output_shape=(None, 59))
+        node3.is_fln_quantization = Mock(return_value=True)
+
+        mock_nodes_list = [node1, node2, node3]
+        for node in mock_nodes_list:
+            node.is_activation_quantization_enabled = Mock(return_value=False)
+            node.is_quantization_preserving = Mock(return_value=False)
+
+        # Build a graph connecting the nodes.
+        graph = Graph('g',
+                      input_nodes=[node1],
+                      nodes=mock_nodes_list,
+                      output_nodes=[OutTensor(node3, 0)],
+                      edge_list=[Edge(node1, node2, 0, 0), Edge(node2, node3, 0, 0)])
+        graph.set_out_stats_collector_to_node = Mock(wraps=graph.set_out_stats_collector_to_node)
+
+        # Simulate kernel attribute retrieval.
+        fw_info_mock.get_kernel_op_attributes.return_value = [None]
+
+        # Instantiate ModelCollector.
+        mc = ModelCollector(graph, fw_impl_mock, fw_info_mock, qc=DEFAULTCONFIG)
+
+        # Verify that stats collectors are correctly assigned.
+        graph.set_out_stats_collector_to_node.assert_called()
+        fw_impl_mock.model_builder.assert_called_once()
+        assert isinstance(graph.get_out_stats_collector(node1), StatsCollector)
+        assert isinstance(graph.get_out_stats_collector(node2), NoStatsCollector)
+        assert isinstance(graph.get_out_stats_collector(node3), StatsCollector)
+        assert isinstance(graph.get_in_stats_collector(node2), StatsCollector)
+        assert isinstance(graph.get_in_stats_collector(node3), NoStatsCollector)
+        assert mc.intermediate_output_tensors == [node1]
+        assert mc.model_outputs == [node3]
+        assert len(mc.stats_containers_list) == 2
+
 
 class TestModelCollectorInfer:
     @pytest.fixture(autouse=True)
@@ -214,9 +272,14 @@ class TestModelCollectorInfer:
         self.node3.is_activation_quantization_enabled = Mock(return_value=True)
         self.node3.is_weights_quantization_enabled = Mock(return_value=False)
 
+        mock_nodes_list = [self.node1, self.node2, self.node3]
+        for node in mock_nodes_list:
+            node.is_fln_quantization = Mock(return_value=False)
+            node.is_quantization_preserving = Mock(return_value=False)
+
         self.graph = Graph('g',
                            input_nodes=[self.node1],
-                           nodes=[self.node1, self.node2, self.node3],
+                           nodes=mock_nodes_list,
                            output_nodes=[OutTensor(self.node3, 0)],
                            edge_list=[Edge(self.node1, self.node2, 0, 0), Edge(self.node2, self.node3, 0, 0)])
 
