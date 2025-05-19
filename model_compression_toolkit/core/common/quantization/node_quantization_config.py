@@ -135,6 +135,7 @@ class NodeActivationQuantizationConfig(BaseNodeQuantizationConfig):
     def quantization_preserving(self):
         return self.quant_mode == ActivationQuantizationMode.PRESERVE_QUANT
 
+    @property
     def fln_quantization(self):
         return self.quant_mode == ActivationQuantizationMode.FLN_QUANT
 
@@ -206,9 +207,20 @@ class NodeActivationQuantizationConfig(BaseNodeQuantizationConfig):
             activation_params: Dictionary that contains weight quantization params.
 
         """
-        assert self.quant_mode == ActivationQuantizationMode.QUANT
+        assert self.enable_activation_quantization or self.fln_quantization
         for param_name, param_value in activation_params.items():
             self.activation_quantization_params[param_name] = param_value
+
+    def set_op_quantization_cfg(self, op_cfg: OpQuantizationConfig):
+        """
+         Set OpQuantizationConfig for the node.
+        Args:
+            op_cfg: OpQuantizationConfig to set.
+        """
+        self.activation_quantization_method = op_cfg.activation_quantization_method
+        self.activation_n_bits = op_cfg.activation_n_bits
+        self.signedness = op_cfg.signedness
+        self.activation_quantization_params_fn = get_activation_quantization_params_fn(activation_quantization_method=self.activation_quantization_method)
 
     def __eq__(self, other: Any) -> bool:
         """
