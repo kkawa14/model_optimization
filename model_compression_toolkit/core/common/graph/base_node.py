@@ -128,13 +128,13 @@ class BaseNode:
         assert len(q_modes) == 1
         return q_modes.pop() == q_mode
 
-    def is_fln_quantization(self) -> bool:
+    def is_activation_quantization_enabled(self) -> bool:
         """
         Returns: Whether node activation quantization is enabled or not.
         """
         return self._is_single_quant_mode(ActivationQuantizationMode.QUANT)
 
-    def is_fln_quantization_enabled(self) -> bool:
+    def is_fln_quantization(self) -> bool:
         """
         Returns: Whether fln node activation quantization is enabled or not.
         """
