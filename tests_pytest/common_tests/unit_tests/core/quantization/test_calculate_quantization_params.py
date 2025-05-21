@@ -20,7 +20,8 @@ from model_compression_toolkit.core import QuantizationConfig
 from model_compression_toolkit.target_platform_capabilities import AttributeQuantizationConfig, OpQuantizationConfig, \
     Signedness
 from model_compression_toolkit.core.common.network_editors import NodeTypeFilter, NodeNameFilter
-from model_compression_toolkit.core import BitWidthConfig, QuantizationConfig
+from model_compression_toolkit.core import BitWidthConfig, QuantizationConfig, QuantizationErrorMethod
+from model_compression_toolkit.core.common.hessian.hessian_info_service import HessianInfoService
 
 from model_compression_toolkit.core.common.quantization.set_node_quantization_config import \
     set_quantization_configuration_to_graph
@@ -122,7 +123,7 @@ class TestCalculateQuantizationParams:
         tpc = self.generate_tpc_local(default_config, base_cfg, mx_cfg_list)
         return tpc
 
-    def representative_data_gen(self, shape=(3, 8, 8), num_inputs=1, batch_size=2, num_iter=1):
+    def representative_data_gen(self, shape=(3, 8, 8), num_inputs=1, batch_size=2, num_iter=10):
         for _ in range(num_iter):
             yield [torch.randn(batch_size, *shape)] * num_inputs
 
@@ -162,26 +163,16 @@ class TestCalculateQuantizationParams:
             lut_values_bitwidth=None)
         return weights_attr_config
 
-    def _create_node_weights_op_cfg(
-            self,
-            def_weight_attr_config: AttributeQuantizationConfig) -> OpQuantizationConfig:
-
+    def _create_node_weights_op_cfg(self,
+                                    def_weight_attr_config: AttributeQuantizationConfig) -> OpQuantizationConfig:
 
         # define a quantization config to quantize the kernel (for layers where there is a kernel attribute).
         kernel_base_config = AttributeQuantizationConfig(
             weights_quantization_method=QuantizationMethod.SYMMETRIC,
-            weights_n_bits=8,
-            weights_per_channel_threshold=True,
-            enable_weights_quantization=True,
-            lut_values_bitwidth=None)
+            weights_n_bits=8)
 
         # define a quantization config to quantize the bias (for layers where there is a bias attribute).
-        bias_config = AttributeQuantizationConfig(
-            weights_quantization_method=QuantizationMethod.POWER_OF_TWO,
-            weights_n_bits=FLOAT_BITWIDTH,
-            weights_per_channel_threshold=False,
-            enable_weights_quantization=False,
-            lut_values_bitwidth=None)
+        bias_config = AttributeQuantizationConfig()
 
         attr_weights_configs_mapping = {'weight': kernel_base_config, 'bias': bias_config}
         print('attr_weights_configs_mapping', attr_weights_configs_mapping)
@@ -202,7 +193,7 @@ class TestCalculateQuantizationParams:
         return op_cfg
 
 
-    def get_test_graph(self, qc):
+    def get_test_graph(self):
         float_model = self.get_float_model()
         fw_info = DEFAULT_PYTORCH_INFO
 
@@ -211,56 +202,55 @@ class TestCalculateQuantizationParams:
                                      self.representative_data_gen)
         graph.set_fw_info(fw_info)
 
+        #quantization_config = QuantizationConfig(weights_error_method=QuantizationErrorMethod.HMSE)
+        quantization_config = QuantizationConfig()
         tpc = self.get_tpc()
         attach2pytorch = AttachTpcToPytorch()
         fqc = attach2pytorch.attach(
-            tpc, qc.custom_tpc_opset_to_layer)
+            tpc, quantization_config.custom_tpc_opset_to_layer)
         graph.set_fqc(fqc)
 
         def_weight_attr_config = self._create_weights_attr_quantization_config(8)
         op_cfg = self._create_node_weights_op_cfg(def_weight_attr_config=def_weight_attr_config)
 
-        quantization_config = QuantizationConfig()
+
         print()
         graph.node_to_out_stats_collector = dict()
         for id, n in enumerate(graph.nodes):
             print('n', id, n)
             n.prior_info = fw_impl.get_node_prior_info(n, fw_info, graph)
-
-            #sc = BaseStatsCollector()
-            #graph.set_out_stats_collector_to_node(n, sc)
-
-            #from model_compression_toolkit.core.common.model_collector import create_stats_collector_for_node
-            #create_stats_collector_for_node(n, fw_info)
-
-            #node_qc_options = n.get_qco(fqc)
-            #print('zzz000', node_qc_options)
-            if False:
-                set_quantization_configs_to_node(n, graph, quantization_config, fw_info, fqc)
+            n.candidates_quantization_cfg = []
+            candidate_qc_a = CandidateNodeQuantizationConfig(
+                activation_quantization_cfg=NodeActivationQuantizationConfig(qc=quantization_config, op_cfg=op_cfg,
+                                                                             activation_quantization_fn=None,
+                                                                             activation_quantization_params_fn=None),
+                weights_quantization_cfg=NodeWeightsQuantizationConfig(qc=quantization_config, op_cfg=op_cfg,
+                                                                       weights_channels_axis=[0, 1],
+                                                                       node_attrs_list=['weight', 'bias'])
+            )
+            if n.name in ['conv3', 'relu']:
+                candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
             else:
-                #"""
-                n.candidates_quantization_cfg = []
-                candidate_qc_a = CandidateNodeQuantizationConfig(
-                    activation_quantization_cfg=NodeActivationQuantizationConfig(qc=quantization_config, op_cfg=op_cfg,
-                                                                                 activation_quantization_fn=None,
-                                                                                 activation_quantization_params_fn=None),
-                    weights_quantization_cfg=NodeWeightsQuantizationConfig(qc=quantization_config, op_cfg=op_cfg, weights_channels_axis=[0, 1], node_attrs_list=['weight', 'bias'])
+                candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.QUANT
+            n.candidates_quantization_cfg.append(candidate_qc_a)
 
-                )
-                if n.name in ['conv3', 'relu']:
-                    candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
-                else:
-                    candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.QUANT
-                n.candidates_quantization_cfg.append(candidate_qc_a)
-                #"""
+            graph.node_to_out_stats_collector[n] = StatsCollector(init_min_value=0.0, init_max_value=1.0, out_channel_axis=fw_info.out_channel_axis_mapping.get(n.type))
+            graph.node_to_out_stats_collector[n].hc._n_bins = 3
+            if n.name in ['conv1']:
+                graph.node_to_out_stats_collector[n].hc._bins = np.array([0.4, 0.8, 1.2])
+            elif n.name in ['conv2']:
+                graph.node_to_out_stats_collector[n].hc._bins = np.array([0.7, 1.4, 2.1])
+            elif n.name in ['conv3']:
+                graph.node_to_out_stats_collector[n].hc._bins = np.array([-32, -24, -1])
+            elif n.name in ['relu']:
+                graph.node_to_out_stats_collector[n].hc._bins = np.array([2.0, 4.0, 6.0])
+            else:
+                graph.node_to_out_stats_collector[n].hc._bins = np.array([0.1, 0.2, 0.3])
 
-                graph.node_to_out_stats_collector[n] = StatsCollector(init_min_value=-1.234+id, init_max_value=5.678, out_channel_axis=fw_info.out_channel_axis_mapping.get(n.type))
-                graph.node_to_out_stats_collector[n].hc._n_bins = 3
-                graph.node_to_out_stats_collector[n].hc._bins = np.array([1, 2, 3, 4*(id+1)])
-                graph.node_to_out_stats_collector[n].hc._counts= np.array([4, 5, 6])
-                print("dbg051900 n_bins", graph.node_to_out_stats_collector[n].hc._n_bins)
-                print("dbg051900 bits", graph.node_to_out_stats_collector[n].hc._bins)
-                print("dbg051900 counts", graph.node_to_out_stats_collector[n].hc._counts)
+            graph.node_to_out_stats_collector[n].hc._counts = np.array([1, 1])
+            print("dbg051900 n_bins", graph.node_to_out_stats_collector[n].hc._n_bins)
+            print("dbg051900 bins  ", graph.node_to_out_stats_collector[n].hc._bins)
+            print("dbg051900 counts", graph.node_to_out_stats_collector[n].hc._counts)
 
 
 
@@ -274,8 +264,8 @@ class TestCalculateQuantizationParams:
                 print(candidate_qc.activation_quantization_cfg)
                 print('-------------------------------------------')
 
-
-        return graph, fw_impl
+        hessian_info_service = HessianInfoService(graph=graph, fw_impl=fw_impl)
+        return graph, fw_impl, hessian_info_service
 
     # test case for test_calculate_quantization_params
     test_input_0 = (None, None)
@@ -286,18 +276,38 @@ class TestCalculateQuantizationParams:
     ])
     def test_calculate_quantization_params(self, inputs, expected):
         quantization_config = QuantizationConfig()
-        graph, fw_impl = self.get_test_graph(quantization_config)
-        print()
-        print(graph)
+        graph, fw_impl, hessian_info_service = self.get_test_graph()
+        print("\n", graph)
         print(graph.nodes)
 
-        calculate_quantization_params(graph, fw_impl, self.representative_data_gen)
+        calculate_quantization_params(graph, fw_impl, self.representative_data_gen, hessian_info_service=hessian_info_service)
 
         for node in graph.nodes:
             print('node', node)
             for candidate_qc in node.candidates_quantization_cfg:
                 print('###############')
                 print('candidate_qc.quant_mode', candidate_qc.activation_quantization_cfg.quant_mode)
-                print('candidate_qc.actquaparams', candidate_qc.activation_quantization_cfg.activation_quantization_params)
+                assert type(candidate_qc.activation_quantization_cfg.activation_quantization_params) == dict
+                assert 'threshold' in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
+                assert 'is_signed' in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
+                print('candidate_qc.actquaparams type',
+                      type(candidate_qc.activation_quantization_cfg.activation_quantization_params))
+                print('candidate_qc.actquaparams',
+                      candidate_qc.activation_quantization_cfg.activation_quantization_params)
+                threshold = candidate_qc.activation_quantization_cfg.activation_quantization_params['threshold']
+                is_signed = candidate_qc.activation_quantization_cfg.activation_quantization_params['is_signed']
+                if node.name in 'conv1':
+                    assert threshold == 1.0
+                    assert is_signed == False
+                elif node.name in 'conv2':
+                    assert threshold == 2.0
+                    assert is_signed == False
+                elif node.name in 'conv3':
+                    assert threshold == 64.0
+                    assert is_signed == True
+                elif node.name in 'relu':
+                    assert threshold == 16.0
+                    assert is_signed == False
+
         pass
 

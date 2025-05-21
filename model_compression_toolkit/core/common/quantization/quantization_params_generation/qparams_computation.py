@@ -47,10 +47,6 @@ def _collect_nodes_for_hmse(nodes_list: List[BaseNode], graph: Graph) -> List[Ba
         kernel_attr_name = graph.fw_info.get_kernel_op_attributes(n.type)
         kernel_attr_name = None if kernel_attr_name is None or len(kernel_attr_name) == 0 else kernel_attr_name[0]
 
-        #print('dbg000', n, kernel_attr_name, n.candidates_quantization_cfg)
-        print('dbg000', n, kernel_attr_name)
-        if kernel_attr_name is not None:
-            print('dbg001', n.is_weights_quantization_enabled(kernel_attr_name))
         if kernel_attr_name is not None and n.is_weights_quantization_enabled(kernel_attr_name) and \
             all([c.weights_quantization_cfg.get_attr_config(kernel_attr_name).weights_error_method ==
                  QuantizationErrorMethod.HMSE for c in n.candidates_quantization_cfg]):
@@ -101,20 +97,9 @@ def calculate_quantization_params(graph: Graph,
                                        target_nodes=nodes_for_hmse)
         hessian_info_service.fetch_hessian(request)
 
-    #for n in tqdm(nodes_list, "Calculating quantization parameters"):  # iterate only nodes that we should compute their thresholds
-    for n in nodes_list:
-        print('##### n', n)
+    for n in tqdm(nodes_list, "Calculating quantization parameters"):  # iterate only nodes that we should compute their thresholds
         for candidate_qc in n.candidates_quantization_cfg:
-            print('################')
-            print('candidate_qc', type(candidate_qc))
-            print('--weights_quantization_cfg-----------------------------------------')
-            print(candidate_qc.weights_quantization_cfg)
-            print('-------------------------------------------')
-            print('--activation_quantization_cfg-----------------------------------------')
-            print(candidate_qc.activation_quantization_cfg)
-            print('-------------------------------------------')
             for attr in n.get_node_weights_attributes():
-                print('attr', attr)
                 if n.is_weights_quantization_enabled(attr):
                     # If the node's weights attribute should be quantized, we compute its quantization parameters
                     attr_cfg = candidate_qc.weights_quantization_cfg.get_attr_config(attr)
@@ -150,14 +135,7 @@ def calculate_quantization_params(graph: Graph,
                     attr_cfg.weights_channels_axis = (output_channels_axis, attr_cfg.weights_channels_axis[1])
                     attr_cfg.set_weights_quantization_param(weights_params)
 
-            print('mode', candidate_qc.activation_quantization_cfg.quant_mode)
-            print("aa", graph.get_out_stats_collector(n))
-            print("graph.node_to_out_stats_collector", type(graph.node_to_out_stats_collector), graph.node_to_out_stats_collector)
-            from model_compression_toolkit.core.common.quantization.node_quantization_config import \
-                ActivationQuantizationMode
-            if candidate_qc.activation_quantization_cfg.quant_mode == ActivationQuantizationMode.FLN_QUANT:
-                print("FLN_QUANT!")
-            if n.is_activation_quantization_enabled() :#or n.is_fln_activation_quantization_enabled():
+            if n.is_activation_quantization_enabled() or n.is_fln_activation_quantization_enabled():
                 # If node's activations should be quantized as well, we compute its activation quantization parameters
                 activation_params = get_activations_qparams(
                     activation_quant_cfg=candidate_qc.activation_quantization_cfg,
