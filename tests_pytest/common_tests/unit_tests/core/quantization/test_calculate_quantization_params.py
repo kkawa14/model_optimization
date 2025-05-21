@@ -102,12 +102,7 @@ class TestCalculateQuantizationParams:
         return BaseModel()
 
     def _create_weights_attr_quantization_config(self, weights_n_bits: int) -> AttributeQuantizationConfig:
-        weights_attr_config = AttributeQuantizationConfig(
-            weights_quantization_method=QuantizationMethod.POWER_OF_TWO,
-            weights_n_bits=weights_n_bits,
-            weights_per_channel_threshold=False,
-            enable_weights_quantization=True,
-            lut_values_bitwidth=None)
+        weights_attr_config = AttributeQuantizationConfig(weights_n_bits=weights_n_bits)
         return weights_attr_config
 
     def _create_node_weights_op_cfg(self,
@@ -129,9 +124,6 @@ class TestCalculateQuantizationParams:
             supported_input_activation_n_bits=8,
             enable_activation_quantization=True,
             quantization_preserving=False,
-            fixed_scale=None,
-            fixed_zero_point=None,
-            simd_size=None,
             signedness=Signedness.AUTO
         )
 
