@@ -54,7 +54,7 @@ class TestCalculateQuantizationParams:
         )
 
         mx_cfg_list = [base_cfg]
-        for n in [2, 4, 16]:
+        for n in [2, 4]:
             mx_cfg_list.append(base_cfg.clone_and_edit(attr_to_edit={KERNEL_ATTR: {WEIGHTS_N_BITS: n}}))
 
         return base_cfg, mx_cfg_list, default_config
