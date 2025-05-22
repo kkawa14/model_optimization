@@ -909,12 +909,8 @@ class Graph(nx.MultiDiGraph, GraphSearches):
         except for the last node in each fused group.
         """
         nodes_to_disable = self.fusing_info.get_nodes_to_disable_activation_quantization()
-        fused_node_op_id = self.fusing_info.get_fused_node_name(node.name)
-        fusiong_op_quaitization_cfg = self.fusing_info.get_fused_op_quantization_config(fused_node_op_id)
         for node in nodes_to_disable:
             for qc in node.candidates_quantization_cfg:
-                if fusiong_op_quaitization_cfg is not None:
-                    qc.activation_quantization_cfg.set_op_quantization_cfg(fusiong_op_quaitization_cfg)
                 qc.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
 
     def validate(self):

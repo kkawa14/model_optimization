@@ -211,17 +211,6 @@ class NodeActivationQuantizationConfig(BaseNodeQuantizationConfig):
         for param_name, param_value in activation_params.items():
             self.activation_quantization_params[param_name] = param_value
 
-    def set_op_quantization_cfg(self, op_cfg: OpQuantizationConfig):
-        """
-         Set OpQuantizationConfig for the node.
-        Args:
-            op_cfg: OpQuantizationConfig to set.
-        """
-        self.activation_quantization_method = op_cfg.activation_quantization_method
-        self.activation_n_bits = op_cfg.activation_n_bits
-        self.signedness = op_cfg.signedness
-        self.activation_quantization_params_fn = get_activation_quantization_params_fn(activation_quantization_method=self.activation_quantization_method)
-
     def __eq__(self, other: Any) -> bool:
         """
         Compares the object to another object to find if they are equal.
