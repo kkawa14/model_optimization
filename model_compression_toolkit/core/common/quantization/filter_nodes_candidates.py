@@ -21,6 +21,11 @@ from model_compression_toolkit.constants import FLOAT_BITWIDTH
 from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import \
     CandidateNodeQuantizationConfig
 
+from model_compression_toolkit.core.common.quantization.quantization_params_fn_selection import \
+    get_activation_quantization_params_fn
+
+
+
 
 def filter_nodes_candidates(graph: Graph):
     """
@@ -34,7 +39,14 @@ def filter_nodes_candidates(graph: Graph):
     """
     nodes = list(graph.nodes)
     for n in nodes:
-        n.candidates_quantization_cfg = filter_node_candidates(node=n, fw_info=graph.fw_info)
+        fused_node_op_id = graph.fusing_info.get_fused_op_id_for_node(n.name)
+        fusiong_op_quaitization_cfg = graph.fusing_info.get_fused_op_quantization_config(fused_node_op_id)
+        print("test")
+        print("fused_node_op_id",fused_node_op_id)
+        print("fusiong_op_quaitization_cfg",fusiong_op_quaitization_cfg)
+        
+        
+        n.candidates_quantization_cfg = filter_node_candidates(node=n, fw_info=graph.fw_info, op_cfg=fusiong_op_quaitization_cfg)
 
     return graph
 
@@ -71,7 +83,7 @@ def _filter_bit_method_dups(candidates: List[CandidateNodeQuantizationConfig],
     return final_candidates
 
 
-def filter_node_candidates(node: BaseNode, fw_info) -> List[CandidateNodeQuantizationConfig]:
+def filter_node_candidates(node: BaseNode, fw_info, op_cfg) -> List[CandidateNodeQuantizationConfig]:
     """
     Updates a node's candidates configuration list.
     If the node's weights quantization is disabled (or it only has activations to quantize), then the updated list
@@ -82,6 +94,7 @@ def filter_node_candidates(node: BaseNode, fw_info) -> List[CandidateNodeQuantiz
     Args:
         node: Node to set its quantization configurations.
         fw_info: FrameworkInfo object with information about the specific framework's model.
+		op_cfg:OpQuantizationConfig to set.
 
     """
 
@@ -93,9 +106,16 @@ def filter_node_candidates(node: BaseNode, fw_info) -> List[CandidateNodeQuantiz
         # If activation quantization is disabled and the node doesn't have a kernel or doesn't quantize the kernel,
         # but for some reason the node has multiple candidates then replace it with a single dummy candidate with
         # default bit-width values.
-        single_dummy_candidate = filtered_candidates[0]
-        single_dummy_candidate.activation_quantization_cfg.activation_n_bits = FLOAT_BITWIDTH
-        single_dummy_candidate.activation_quantization_cfg.activation_quantization_method = QuantizationMethod.POWER_OF_TWO
+
+        if node.is_fln_quantization() and op_cfg is not None:
+            single_dummy_candidate.activation_quantization_method = op_cfg.activation_quantization_method
+            single_dummy_candidate.activation_n_bits = op_cfg.activation_n_bits
+            single_dummy_candidate.signedness = op_cfg.signedness
+            single_dummy_candidate.activation_quantization_params_fn = get_activation_quantization_params_fn(activation_quantization_method=op_cfg.activation_quantization_method)
+        else:
+            single_dummy_candidate = filtered_candidates[0]
+            single_dummy_candidate.activation_quantization_cfg.activation_n_bits = FLOAT_BITWIDTH
+            single_dummy_candidate.activation_quantization_cfg.activation_quantization_method = QuantizationMethod.POWER_OF_TWO
 
         if kernel_attr is not None:
             kernel_config = single_dummy_candidate.weights_quantization_cfg.get_attr_config(kernel_attr)
@@ -113,8 +133,14 @@ def filter_node_candidates(node: BaseNode, fw_info) -> List[CandidateNodeQuantiz
                                and not seen_candidates.add(candidate.weights_quantization_cfg)]
 
         for c in filtered_candidates:
-            c.activation_quantization_cfg.activation_n_bits = FLOAT_BITWIDTH
-            c.activation_quantization_cfg.activation_quantization_method = QuantizationMethod.POWER_OF_TWO
+            if node.is_fln_quantization() and op_cfg is not None:
+                c.activation_quantization_method = op_cfg.activation_quantization_method
+                c.activation_n_bits = op_cfg.activation_n_bits
+                c.signedness = op_cfg.signedness
+                c.activation_quantization_params_fn = get_activation_quantization_params_fn(activation_quantization_method=op_cfg.activation_quantization_method)
+            else:
+                c.activation_quantization_cfg.activation_n_bits = FLOAT_BITWIDTH
+                c.activation_quantization_cfg.activation_quantization_method = QuantizationMethod.POWER_OF_TWO
 
         final_candidates = _filter_bit_method_dups(filtered_candidates, kernel_attr)
 
