@@ -110,6 +110,7 @@ class TestCalculateQuantizationParams:
         # define a quantization config to quantize the kernel (for layers where there is a kernel attribute).
         kernel_base_config = AttributeQuantizationConfig(
             weights_quantization_method=QuantizationMethod.SYMMETRIC,
+            enable_weights_quantization=True,
             weights_n_bits=8)
 
         # define a quantization config to quantize the bias (for layers where there is a bias attribute).
@@ -139,25 +140,26 @@ class TestCalculateQuantizationParams:
         graph.set_fw_info(fw_info)
 
         quantization_config = QuantizationConfig(weights_error_method=qem)
+
         tpc = self.get_tpc()
         attach2pytorch = AttachTpcToPytorch()
         fqc = attach2pytorch.attach(
             tpc, quantization_config.custom_tpc_opset_to_layer)
         graph.set_fqc(fqc)
 
-        def_weight_attr_config = self._create_weights_attr_quantization_config(8)
+        def_weight_attr_config = self._create_weights_attr_quantization_config(weights_n_bits=8)
         op_cfg = self._create_node_weights_op_cfg(def_weight_attr_config=def_weight_attr_config)
 
         graph.node_to_out_stats_collector = dict()
         for id, n in enumerate(graph.nodes):
-            n.prior_info = fw_impl.get_node_prior_info(n, fw_info, graph)
+            n.prior_info = fw_impl.get_node_prior_info(node=n, fw_info=fw_info, graph=graph)
             n.candidates_quantization_cfg = []
             candidate_qc_a = CandidateNodeQuantizationConfig(
                 activation_quantization_cfg=NodeActivationQuantizationConfig(qc=quantization_config, op_cfg=op_cfg,
                                                                              activation_quantization_fn=None,
                                                                              activation_quantization_params_fn=None),
                 weights_quantization_cfg=NodeWeightsQuantizationConfig(qc=quantization_config, op_cfg=op_cfg,
-                                                                       weights_channels_axis=[0, 1],
+                                                                       weights_channels_axis=(0, 1),
                                                                        node_attrs_list=['weight', 'bias'])
             )
             if n.name in ['conv3', 'relu']:
@@ -196,8 +198,8 @@ class TestCalculateQuantizationParams:
         test_input_1,
     ])
     def test_calculate_quantization_params(self, inputs):
-        qem = inputs
-        graph, fw_impl, hessian_info_service = self.get_test_graph(qem)
+        quantization_err_method = inputs
+        graph, fw_impl, hessian_info_service = self.get_test_graph(quantization_err_method)
 
         calculate_quantization_params(graph, fw_impl, self.representative_data_gen, hessian_info_service=hessian_info_service)
 
