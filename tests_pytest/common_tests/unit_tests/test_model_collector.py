@@ -119,6 +119,7 @@ class TestStatisticsCollectors:
         assert assigned_node is node
         assert isinstance(assigned_collector, StatsCollector)
  
+ 
 class TestModelCollectorInit:
     def test_assigns_stats_collectors_to_nodes(self, fw_impl_mock, fw_info_mock):
         """
