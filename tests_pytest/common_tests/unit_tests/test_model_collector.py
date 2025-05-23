@@ -353,6 +353,7 @@ class TestModelCollectorInfer:
         assert calls[2][0][0] is self.fake_output3
         assert calls[2][0][1] is None
 
+
 class TestFLNModelCollectorInfer:
     @pytest.fixture(autouse=True)
     def setup(self, fw_impl_mock, fw_info_mock):
