@@ -356,7 +356,7 @@ class TestFLNModelCollectorInfer:
     @pytest.fixture(autouse=True)
     def setup(self, fw_impl_mock, fw_info_mock):
         """
-        Fixture to set up a graph with three nodes, fake model inference outputs,
+        Fixture to set up a graph with four nodes, fake model inference outputs,
         and a fake Hessian service for subsequent inference tests.
         """
         input_shape = (1, 3, 14)
