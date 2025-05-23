@@ -360,6 +360,7 @@ class TestFLNModelCollectorInfer:
         """
         Fixture to set up a graph with four nodes, fake model inference outputs,
         and a fake Hessian service for subsequent inference tests.
+        node4 is a FLN node, the other nodes are not.
         """
         input_shape = (1, 3, 14)
         self.node1 = build_node('node1', output_shape=input_shape, qcs=[build_qc(4), build_qc(2)])
