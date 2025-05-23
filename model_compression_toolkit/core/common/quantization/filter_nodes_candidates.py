@@ -147,7 +147,7 @@ def filter_node_candidates(node: BaseNode, fw_info, op_cfg) -> List[CandidateNod
 
 
 def _update_activation_quantization_cfg(node: BaseNode,
-                                        candidates: CandidateNodeQuantizationConfig,
+                                        candidate: CandidateNodeQuantizationConfig,
                                         op_cfg: OpQuantizationConfig = None):
     """
     Updates the activation quantization configuration of a candidate node.
@@ -155,10 +155,10 @@ def _update_activation_quantization_cfg(node: BaseNode,
     Otherwise, it will set the activation n_bits to FLOAT_BITWIDTH and the quantization method to POWER_OF_TWO.
     Args:
         node: Node to set its quantization configurations.
-        candidates: CandidateNodeQuantizationConfig to update.
+        candidate: CandidateNodeQuantizationConfig to update.
         op_cfg: OpQuantizationConfig of the fln node with quantizers types to use when creating fln node quantization configuration.
     """
-    actq_cfg = candidates.activation_quantization_cfg
+    actq_cfg = candidate.activation_quantization_cfg
 
     if node.is_fln_quantization() and op_cfg is not None:
         activation_n_bits = op_cfg.activation_n_bits

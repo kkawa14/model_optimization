@@ -157,13 +157,14 @@ class TestFilterNodesCandidates:
         """
         def create_exp_candidate_cfg(candidate, n_bits, actq_params_fn, actq_method, signedness=None):
             ret_candidate = deepcopy(candidate)
+            ret_c_actq_cfg = ret_candidate.activation_quantization_cfg
 
-            ret_candidate.activation_quantization_cfg.activation_n_bits = n_bits
-            ret_candidate.activation_quantization_cfg.activation_quantization_fn = actq_params_fn   ### same as the activation_quantization_params_fn
-            ret_candidate.activation_quantization_cfg.activation_quantization_method = actq_method
-            ret_candidate.activation_quantization_cfg.activation_quantization_params_fn = actq_params_fn
+            ret_c_actq_cfg.activation_n_bits = n_bits
+            ret_c_actq_cfg.activation_quantization_fn = actq_params_fn   ### same as the activation_quantization_params_fn
+            ret_c_actq_cfg.activation_quantization_method = actq_method
+            ret_c_actq_cfg.activation_quantization_params_fn = actq_params_fn
             if signedness is not None:
-                ret_candidate.activation_quantization_cfg.signedness = signedness
+                ret_c_actq_cfg.signedness = signedness
             
             return ret_candidate
 
@@ -174,22 +175,30 @@ class TestFilterNodesCandidates:
         exp_candidate_base2 = build_qc(a_nbits=4, a_enable=True, w_attr={'weight': (4, True)},
                                         activation_quantization_fn=symmetric_selection_histogram,
                                         activation_quantization_method=QuantizationMethod.SYMMETRIC)
+        
+        exp_actq_cfg_params_dict1 = {'n_bits': 4,
+                                     'actq_params_fn': lut_kmeans_histogram,
+                                     'actq_method': QuantizationMethod.LUT_POT_QUANTIZER,
+                                     'signedness': Signedness.AUTO}
+        exp_actq_cfg_params_dict2 = {'n_bits': FLOAT_BITWIDTH,
+                                     'actq_params_fn': power_of_two_selection_histogram,
+                                     'actq_method': QuantizationMethod.POWER_OF_TWO}
 
         ### Expected candidates when transformed by the qcfg of FusingInfo
-        conv_1_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, 4, lut_kmeans_histogram, QuantizationMethod.LUT_POT_QUANTIZER, Signedness.AUTO)]
+        conv_1_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1)]
         ### Expected values when unchanged
         relu_1_qc_cfg = [exp_candidate_base1]
         ### Expected candidates when transformed by FusingInfo where qcfg is None
-        conv_2_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, FLOAT_BITWIDTH, power_of_two_selection_histogram, QuantizationMethod.POWER_OF_TWO)]
+        conv_2_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict2)]
         ### Expected values when unchanged
         tanh_qc_cfg   = [exp_candidate_base1]
         ### Expected candidates with multiple configurations when transformed by the qcfg of FusingInfo
-        conv_3_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, 4, lut_kmeans_histogram, QuantizationMethod.LUT_POT_QUANTIZER, Signedness.AUTO),
-                         create_exp_candidate_cfg(exp_candidate_base2, 4, lut_kmeans_histogram, QuantizationMethod.LUT_POT_QUANTIZER, Signedness.AUTO)]
+        conv_3_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1),
+                         create_exp_candidate_cfg(exp_candidate_base2, **exp_actq_cfg_params_dict1)]
         ### Expected values when unchanged
         relu_2_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
         ### Expected candidates when transformed with preserving set to True
-        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, FLOAT_BITWIDTH, power_of_two_selection_histogram, QuantizationMethod.POWER_OF_TWO)]
+        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict2)]
         ### Expected values when unchanged
         linear_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
 
@@ -203,11 +212,14 @@ class TestFilterNodesCandidates:
         Check if the ActivationQuantization settings set on the graph nodes match the expected values
         """
         for test_c, exp_c in zip(candidates, exp_candidates):
-            assert test_c.activation_quantization_cfg.activation_quantization_fn == exp_c.activation_quantization_cfg.activation_quantization_fn
-            assert test_c.activation_quantization_cfg.activation_n_bits == exp_c.activation_quantization_cfg.activation_n_bits
-            assert test_c.activation_quantization_cfg.activation_quantization_method == exp_c.activation_quantization_cfg.activation_quantization_method
-            assert test_c.activation_quantization_cfg.activation_quantization_params_fn == exp_c.activation_quantization_cfg.activation_quantization_params_fn
-            assert test_c.activation_quantization_cfg.signedness == exp_c.activation_quantization_cfg.signedness
+            test_actq_cfg = test_c.activation_quantization_cfg
+            exp_actq_cfg = exp_c.activation_quantization_cfg
+
+            assert test_actq_cfg.activation_quantization_fn == exp_actq_cfg.activation_quantization_fn
+            assert test_actq_cfg.activation_n_bits == exp_actq_cfg.activation_n_bits
+            assert test_actq_cfg.activation_quantization_method == exp_actq_cfg.activation_quantization_method
+            assert test_actq_cfg.activation_quantization_params_fn == exp_actq_cfg.activation_quantization_params_fn
+            assert test_actq_cfg.signedness == exp_actq_cfg.signedness
 
     @pytest.mark.parametrize(("idx", "op_cfg"), [
         (0, TEST_QC),   ### FLN_QUANT layer : Conv2d
