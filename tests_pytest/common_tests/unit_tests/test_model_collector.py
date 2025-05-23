@@ -303,9 +303,9 @@ class TestModelCollectorInfer:
         self.qc = DEFAULTCONFIG
         self.infer_input = [np.random.randn(*input_shape)]
 
-    def test_infer_without_hessian(self, fw_impl_mock, fw_info_mock):
+    def test_infer_without_hessian_in_FLN(self, fw_impl_mock, fw_info_mock):
         """
-        Verify that ModelCollector.infer calls run_model_inference without fetching hessian data
+        In FLN node,verify that ModelCollector.infer calls run_model_inference without fetching hessian data
         when activation_error_method is not HMSE.
         """
         self.qc.activation_error_method = QuantizationErrorMethod.MSE
@@ -317,9 +317,9 @@ class TestModelCollectorInfer:
         # Confirm that the Hessian service is not used.
         mc.hessian_service.fetch_hessian.assert_not_called()
 
-    def test_infer_with_hessian(self, fw_impl_mock, fw_info_mock):
+    def test_infer_with_hessian_in_FLN(self, fw_impl_mock, fw_info_mock):
         """
-        Verify that ModelCollector.infer fetches hessian data when activation_error_method is HMSE.
+        In FLN node,Verify that ModelCollector.infer fetches hessian data when activation_error_method is HMSE.
         """
         self.qc.activation_error_method = QuantizationErrorMethod.HMSE
         mc = ModelCollector(self.graph, fw_impl_mock, fw_info_mock, qc=self.qc, hessian_info_service=self.fake_hessian_info_service)
@@ -330,9 +330,9 @@ class TestModelCollectorInfer:
         # Confirm that the Hessian data is fetched.
         mc.hessian_service.fetch_hessian.assert_called_once()
 
-    def test_update_statistics_called(self, fw_impl_mock, fw_info_mock):
+    def test_update_statistics_called_in_FLN(self, fw_impl_mock, fw_info_mock):
         """
-        Verify that update_statistics is called for each statistics container during inference.
+        In FLN node,Verify that update_statistics is called for each statistics container during inference.
         """
         # Create a dummy stats container that always requires collection.
         fake_stats_container = Mock(require_collection=lambda: True, update_statistics=Mock())
