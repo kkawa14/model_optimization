@@ -94,6 +94,7 @@ class TestStatisticsCollectors:
         node.type = DummyLayer
         node.prior_info = Mock(min_output=-8, max_output=9)
 
+
         collector = create_stats_collector_for_node(node, fw_info_mock)
         assert isinstance(collector, StatsCollector)
 
