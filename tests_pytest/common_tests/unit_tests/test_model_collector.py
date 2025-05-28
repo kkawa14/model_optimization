@@ -113,6 +113,23 @@ class TestStatisticsCollectors:
         assert collector.mpcc.init_min_value is None
         assert collector.mpcc.init_max_value is None
 
+    def test_create_stats_collector_for_node_fln_activation_enabled_no_prior_info_mock(self, fw_info_mock):
+        """
+        Verify that for nodes with fln quantization enabled, make sure create_stats_collector_for_node
+        returns a StatsCollector instance even if prior_info is None.
+        """
+        # Set up a fake node with activation quantization enabled and prior_info attributes.
+        node = Mock()
+        node.is_activation_quantization_enabled.return_value = False
+        node.is_fln_quantization.return_value = True
+        node.type = DummyLayer
+        node.prior_info = Mock(min_output=None, max_output=None)
+
+        collector = create_stats_collector_for_node(node, fw_info_mock)
+        assert isinstance(collector, StatsCollector)
+        assert collector.mpcc.init_min_value is None
+        assert collector.mpcc.init_max_value is None
+
     def test_create_tensor2node_assigns_stats_collector(self, fw_info_mock):
         """
         Verify that create_tensor2node assigns a new StatsCollector to a node when no valid collector exists.
