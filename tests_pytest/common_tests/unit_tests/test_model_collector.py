@@ -55,7 +55,6 @@ class TestStatisticsCollectors:
         # Set up a fake node with activation quantization enabled and prior_info attributes.
         node = Mock()
         node.is_activation_quantization_enabled.return_value = True
-        node.is_quantization_preserving.return_value = False
         node.is_fln_quantization.return_value = False
         node.type = DummyLayer
         node.prior_info = Mock(min_output=-1, max_output=9)
@@ -70,7 +69,6 @@ class TestStatisticsCollectors:
         """
         node = Mock()
         node.is_activation_quantization_enabled.return_value = False
-        node.is_quantization_preserving.return_value = False
         node.is_fln_quantization.return_value = False
         node.type = DummyLayer
         # Even if prior_info exists, it should not be used.
@@ -89,7 +87,6 @@ class TestStatisticsCollectors:
         # Set up a fake node with activation quantization enabled and prior_info attributes.
         node = Mock()
         node.is_activation_quantization_enabled.return_value = False
-        node.is_quantization_preserving.return_value = False
         node.is_fln_quantization.return_value = True
         node.type = DummyLayer
         node.prior_info = Mock(min_output=-8, max_output=9)
@@ -150,7 +147,6 @@ class TestModelCollectorInit:
         mock_nodes_list = [node1, node2, node3]
         for node in mock_nodes_list:
             node.is_fln_quantization = Mock(return_value=False)
-            node.is_quantization_preserving = Mock(return_value=False)
 
         # Build a graph connecting the nodes.
         graph = Graph('g',
@@ -197,7 +193,6 @@ class TestModelCollectorInit:
         mock_nodes_list = [node1, node2, node3]
         for node in mock_nodes_list:
             node.is_fln_quantization = Mock(return_value=False)
-            node.is_quantization_preserving = Mock(return_value=False)
 
         # Build a graph connecting the nodes.
         graph = Graph('g',
@@ -240,7 +235,6 @@ class TestModelCollectorInit:
         mock_nodes_list = [node1, node2, node3]
         for node in mock_nodes_list:
             node.is_activation_quantization_enabled = Mock(return_value=False)
-            node.is_quantization_preserving = Mock(return_value=False)
 
         # Build a graph connecting the nodes.
         graph = Graph('g',
@@ -290,7 +284,6 @@ class TestModelCollectorInfer:
         mock_nodes_list = [self.node1, self.node2, self.node3]
         for node in mock_nodes_list:
             node.is_fln_quantization = Mock(return_value=False)
-            node.is_quantization_preserving = Mock(return_value=False)
 
         self.graph = Graph('g',
                            input_nodes=[self.node1],
@@ -386,8 +379,6 @@ class TestFLNModelCollectorInfer:
         self.node4.is_fln_quantization = Mock(return_value=True)
 
         mock_nodes_list = [self.node1, self.node2, self.node3, self.node4]
-        for node in mock_nodes_list:
-            node.is_quantization_preserving = Mock(return_value=False)
 
         self.graph = Graph('g',
                            input_nodes=[self.node1],
