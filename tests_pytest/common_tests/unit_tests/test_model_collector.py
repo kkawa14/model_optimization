@@ -93,6 +93,8 @@ class TestStatisticsCollectors:
 
         collector = create_stats_collector_for_node(node, fw_info_mock)
         assert isinstance(collector, StatsCollector)
+        assert collector.mpcc.init_min_value == -8
+        assert collector.mpcc.init_max_value == 9
 
     def test_create_stats_collector_for_node_fln_activation_enabled_no_prior_info(self, fw_info_mock):
         """
@@ -108,6 +110,8 @@ class TestStatisticsCollectors:
 
         collector = create_stats_collector_for_node(node, fw_info_mock)
         assert isinstance(collector, StatsCollector)
+        assert collector.mpcc.init_min_value is None
+        assert collector.mpcc.init_max_value is None
 
     def test_create_tensor2node_assigns_stats_collector(self, fw_info_mock):
         """
