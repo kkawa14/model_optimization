@@ -227,7 +227,7 @@ class TestFilterNodesCandidates:
         (2, None),      ### FLN_QUANT layer : Conv2d (with not set QC)
         (4, TEST_QC),   ### FLN_QUANT layer : Conv2d (with multiple QCs)
         (6, None),      ### PRESERVE_QUANT layer : Flatten (with preserving flag set to True)
-        (7, None),      ### QUANT layer : Linear (with multiple QCs)
+        (7, None),      ### QUANT layer : Linear
     ])
     def test_filter_node_candidates_updates_activation_quantization_config(self, idx, op_cfg):
         """
