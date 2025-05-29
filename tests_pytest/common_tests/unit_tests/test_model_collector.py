@@ -346,6 +346,19 @@ class TestModelCollectorInfer:
         # Confirm that the Hessian service is not used.
         mc.hessian_service.fetch_hessian.assert_not_called()
 
+    def test_infer_with_hessian(self, fw_impl_mock, fw_info_mock):
+        """
+        Verify that ModelCollector.infer fetches hessian data when activation_error_method is HMSE.
+        """
+        self.qc.activation_error_method = QuantizationErrorMethod.HMSE
+        mc = ModelCollector(self.graph, fw_impl_mock, fw_info_mock, qc=self.qc, hessian_info_service=self.fake_hessian_info_service)
+
+        mc.infer(self.infer_input)
+        # Check that inference runs with gradients enabled.
+        fw_impl_mock.run_model_inference.assert_called_once_with(mc.model, self.infer_input, requires_grad=True)
+        # Confirm that the Hessian data is fetched.
+        mc.hessian_service.fetch_hessian.assert_called_once()
+
     def test_update_statistics_called(self, fw_impl_mock, fw_info_mock):
         """
         Verify that update_statistics is called for each statistics container during inference.
