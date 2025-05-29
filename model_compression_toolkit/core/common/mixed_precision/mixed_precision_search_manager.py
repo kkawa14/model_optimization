@@ -21,7 +21,7 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 
@@ -39,7 +39,7 @@ from model_compression_toolkit.core.common.mixed_precision.mixed_precision_ru_he
     MixedPrecisionRUHelper
 from model_compression_toolkit.core.common.mixed_precision.search_methods.linear_programming import \
     MixedPrecisionIntegerLPSolver
-from model_compression_toolkit.core.common.mixed_precision.sensitivity_evaluation import SensitivityEvaluation
+from model_compression_toolkit.core.common.mixed_precision.sensitivity_eval.sensitivity_evaluation import SensitivityEvaluation
 from model_compression_toolkit.core.common.substitutions.apply_substitutions import substitute
 from model_compression_toolkit.logger import Logger
 from model_compression_toolkit.core.common.mixed_precision.mixed_precision_quantization_config import \
@@ -294,8 +294,12 @@ class MixedPrecisionSearchManager:
         """
         act_qcs, w_qcs = self.orig_graph_ru_helper.get_quantization_candidates(config)
         ru = self.orig_graph_ru_helper.ru_calculator.compute_resource_utilization(
-            target_criterion=TargetInclusionCriterion.AnyQuantized, bitwidth_mode=BitwidthMode.QCustom, act_qcs=act_qcs,
-            w_qcs=w_qcs, ru_targets=self.ru_targets, allow_unused_qcs=True)
+            target_criterion=TargetInclusionCriterion.AnyQuantizedNonFused,
+            bitwidth_mode=BitwidthMode.QCustom,
+            act_qcs=act_qcs,
+            w_qcs=w_qcs,
+            ru_targets=self.ru_targets,
+            allow_unused_qcs=True)
         return ru
 
     def _finalize_distance_metric(self, layer_to_metrics_mapping: Dict[BaseNode, List[float]]):
