@@ -508,8 +508,6 @@ class TestFLNModelCollectorInfer:
         self.node4.is_fln_quantization = Mock(return_value=True)
 
         mock_nodes_list = [self.node1, self.node2, self.node3, self.node4]
-        for node in mock_nodes_list:
-            node.is_quantization_preserving = Mock(return_value=False)
 
         self.graph = Graph('g',
                            input_nodes=[self.node1],
@@ -537,7 +535,7 @@ class TestFLNModelCollectorInfer:
         self.qc = DEFAULTCONFIG
         self.infer_input = [np.random.randn(*input_shape)]
 
-    def test_infer_without_hessian_in_FLN(self, fw_impl_mock, fw_info_mock):
+    def test_infer_without_hessian_in_fln(self, fw_impl_mock, fw_info_mock):
         """
         In FLN node,verify that ModelCollector.infer calls run_model_inference without fetching hessian data
         when activation_error_method is not HMSE.
@@ -551,7 +549,7 @@ class TestFLNModelCollectorInfer:
         # Confirm that the Hessian service is not used.
         mc.hessian_service.fetch_hessian.assert_not_called()
 
-    def test_infer_with_hessian_in_FLN(self, fw_impl_mock, fw_info_mock):
+    def test_infer_with_hessian_in_fln(self, fw_impl_mock, fw_info_mock):
         """
         In FLN node,verify that ModelCollector.infer fetches hessian data when activation_error_method is HMSE.
         """
@@ -564,7 +562,7 @@ class TestFLNModelCollectorInfer:
         # Confirm that the Hessian data is fetched.
         mc.hessian_service.fetch_hessian.assert_called_once()
 
-    def test_update_statistics_called_in_FLN(self, fw_impl_mock, fw_info_mock):
+    def test_update_statistics_called_in_fln(self, fw_impl_mock, fw_info_mock):
         """
         In FLN node,verify that update_statistics is called for each statistics container during inference.
         """
