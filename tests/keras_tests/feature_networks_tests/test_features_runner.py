@@ -15,16 +15,13 @@
 
 
 import unittest
-import subprocess
-import sys
 import numpy as np
 import tensorflow as tf
-from sklearn.metrics.pairwise import distance_metrics
 from tensorflow.keras.layers import PReLU, ELU
 
 from mct_quantizers import QuantizationMethod
 from model_compression_toolkit.core import QuantizationErrorMethod
-from model_compression_toolkit.core.common.mixed_precision.distance_weighting import MpDistanceWeighting
+from model_compression_toolkit.core.common.mixed_precision.sensitivity_eval.distance_weighting import MpDistanceWeighting
 from model_compression_toolkit.core.common.network_editors import NodeTypeFilter, NodeNameFilter
 from model_compression_toolkit.gptq.keras.gptq_loss import sample_layer_attention_loss
 from model_compression_toolkit.gptq import RoundingType
@@ -495,7 +492,7 @@ class FeatureNetworkTest(unittest.TestCase):
         ShiftNegActivationPostAddTest(self,
                                       linear_op_to_test=layers.Conv2D(3, 4),
                                       activation_op_to_test=layers.Activation('swish'),
-                                      post_add_nbits=7).run_test()
+                                      post_add_nbits=8).run_test()
 
     def test_activation_decomposition(self):
         ActivationDecompositionTest(self, activation_function='swish').run_test()
