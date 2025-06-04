@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pytest
 from unittest.mock import Mock
 
 from model_compression_toolkit.exporter.model_wrapper.pytorch.builder.fully_quantized_model_builder import get_activation_quantizer_holder
@@ -33,7 +32,7 @@ def test_get_activation_quantizer_holder(fw_impl_mock):
     assert activation_quantization_holder.activation_holder_quantizer.signed == False
     assert activation_quantization_holder.activation_holder_quantizer.threshold_np == 4.0
 
-def test_get_preserving_activation_quantizer_holder(fw_impl_mock):
+def test_get_fln_activation_quantizer_holder(fw_impl_mock):
 
     activation_quantizers = Mock()
     activation_quantizers.num_bits = 2
