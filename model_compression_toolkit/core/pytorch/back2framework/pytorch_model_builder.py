@@ -347,6 +347,7 @@ class PytorchModel(torch.nn.Module):
                             activation_quantizer_holder = self.get_activation_quantizer_holder(prev_node,
                                                                                                holder_type=PytorchPreservingActivationQuantizationHolder,
                                                                                                **holder_kwargs)
+
                 elif node.is_fln_quantization():
                     holder_kwargs = {'quantization_bypass': True}
                     activation_quantizer_holder = self.get_activation_quantizer_holder(node,
