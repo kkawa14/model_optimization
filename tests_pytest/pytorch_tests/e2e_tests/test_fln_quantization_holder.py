@@ -19,6 +19,7 @@ from mct_quantizers import PytorchActivationQuantizationHolder, PytorchFLNActiva
 from model_compression_toolkit.core import CoreConfig
 from tests_pytest._fw_tests_common_base.base_fusing_test import build_activation_mp_tpc
 
+
 def representative_data_gen(shape=(3, 8, 8), num_inputs=1, batch_size=2, num_iter=1):
     for _ in range(num_iter):
         yield [torch.randn(batch_size, *shape)] * num_inputs

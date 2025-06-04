@@ -29,6 +29,7 @@ from model_compression_toolkit.core.pytorch.back2framework.pytorch_model_builder
 from model_compression_toolkit.target_platform_capabilities.targetplatform2framework.framework_quantization_capabilities import FrameworkQuantizationCapabilities
 from tests_pytest._test_util.tpc_util import minimal_tpc
 
+
 def build_node(name='node', framework_attr={}, layer_class=DummyLayer,
                qcs: List[CandidateNodeQuantizationConfig] = None):
     node = BaseNode(name=name,
@@ -63,12 +64,16 @@ def build_qc(q_mode=ActivationQuantizationMode.QUANT):
 
 def get_test_graph():
 
-    conv1 = build_node('conv1', framework_attr={'in_channels':3, 'out_channels':3, 'kernel_size':3}, layer_class=torch.nn.Conv2d, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
+    conv1 = build_node('conv1', framework_attr={'in_channels':3, 'out_channels':3, 'kernel_size':3}, 
+                       layer_class=torch.nn.Conv2d, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
     relu = build_node('relu', layer_class=torch.nn.ReLU, qcs=[build_qc()])
-    conv2 = build_node('conv2', framework_attr={'in_channels':3, 'out_channels':3, 'kernel_size':3}, layer_class=torch.nn.Conv2d, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
+    conv2 = build_node('conv2', framework_attr={'in_channels':3, 'out_channels':3, 'kernel_size':3}, 
+                       layer_class=torch.nn.Conv2d, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
     sigmoid = build_node('sigmoid', layer_class=torch.nn.Sigmoid, qcs=[build_qc()])
-    flatten = build_node('flatten', layer_class=torch.nn.Flatten, qcs=[build_qc(q_mode=ActivationQuantizationMode.PRESERVE_QUANT)])
-    fc = build_node('fc', framework_attr={'in_features':48, 'out_features':10}, layer_class=torch.nn.Linear, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
+    flatten = build_node('flatten', layer_class=torch.nn.Flatten, 
+                         qcs=[build_qc(q_mode=ActivationQuantizationMode.PRESERVE_QUANT)])
+    fc = build_node('fc', framework_attr={'in_features':48, 'out_features':10}, 
+                    layer_class=torch.nn.Linear, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
     hswish = build_node('hswish', layer_class=torch.nn.Hardswish, qcs=[build_qc()])
     
     graph = Graph('g', input_nodes=[conv1],

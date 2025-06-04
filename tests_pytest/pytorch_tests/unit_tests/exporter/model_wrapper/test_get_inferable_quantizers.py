@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import pytest
 from unittest.mock import Mock
 
 from model_compression_toolkit.exporter.model_wrapper.fw_agnostic.get_inferable_quantizers import get_inferable_quantizers
 from mct_quantizers.pytorch.quantizers.activation_inferable_quantizers.activation_pot_inferable_quantizer import ActivationPOTInferableQuantizer
 
+
 def test_get_inferable_quantizers():
 
-    # node is QUANT
+    # QUANT node
     node_mock = Mock()
     node_mock.is_activation_quantization_enabled.return_value = True
     node_mock.is_fln_quantization.return_value = False
@@ -38,7 +38,7 @@ def test_get_inferable_quantizers():
     assert activation_quantizers[0].signed == True
     assert activation_quantizers[0].threshold_np == 8.0
     
-    # node is FLN_QUANT
+    # FLN_QUANT node
     node_mock = Mock()
     node_mock.is_activation_quantization_enabled.return_value = False
     node_mock.is_fln_quantization.return_value = True
@@ -55,7 +55,7 @@ def test_get_inferable_quantizers():
     assert activation_quantizers[0].signed == False
     assert activation_quantizers[0].threshold_np == 4.0
 
-    # node is NO_QUANT
+    # NO_QUANT node
     node_mock = Mock()
     node_mock.is_activation_quantization_enabled.return_value = False
     node_mock.is_fln_quantization.return_value = False
