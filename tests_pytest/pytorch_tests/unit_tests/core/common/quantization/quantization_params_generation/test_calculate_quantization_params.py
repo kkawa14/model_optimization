@@ -23,7 +23,6 @@ from model_compression_toolkit.core.common.quantization.node_quantization_config
     NodeActivationQuantizationConfig, NodeWeightsQuantizationConfig
 from model_compression_toolkit.target_platform_capabilities import OpQuantizationConfig
 from model_compression_toolkit.core import QuantizationConfig, QuantizationErrorMethod
-from model_compression_toolkit.core.common.hessian.hessian_info_service import HessianInfoService
 from model_compression_toolkit.target_platform_capabilities.targetplatform2framework.attach2pytorch import \
     AttachTpcToPytorch
 import model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema as schema
@@ -176,8 +175,9 @@ class TestCalculateQuantizationParams:
                                                                        weights_channels_axis=(0, 1),
                                                                        node_attrs_list=['weight', 'bias'])
             )
-            if n.name in ['conv3', 'relu']:
+            if n.name in ['conv3']:
                 candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
+                candidate_qc_a.activation_quantization_cfg.activation_n_bits = 16 # set 16bit for FLN node for test.
             else:
                 candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.QUANT
             n.candidates_quantization_cfg.append(candidate_qc_a)
@@ -196,26 +196,16 @@ class TestCalculateQuantizationParams:
                 graph.node_to_out_stats_collector[n].hc._bins = np.array([0.1, 0.2, 0.3])
             graph.node_to_out_stats_collector[n].hc._counts = np.array([1, 1])
 
-        hessian_info_service = HessianInfoService(graph=graph, fw_impl=fw_impl)
-        return graph, fw_impl, hessian_info_service
+        return graph, fw_impl
 
     def representative_data_gen(self, shape=(3, 8, 8), num_inputs=1, batch_size=2, num_iter=10):
         for _ in range(num_iter):
             yield [torch.randn(batch_size, *shape)] * num_inputs
 
-    # test case for test_calculate_quantization_params
-    test_input_0 = QuantizationErrorMethod.MSE
-    test_input_1 = QuantizationErrorMethod.HMSE
+    def test_calculate_quantization_params(self):
+        graph, fw_impl = self.get_test_graph(QuantizationErrorMethod.MSE)
 
-    @pytest.mark.parametrize("inputs", [
-        test_input_0,
-        test_input_1,
-    ])
-    def test_calculate_quantization_params(self, inputs):
-        quantization_err_method = inputs
-        graph, fw_impl, hessian_info_service = self.get_test_graph(quantization_err_method)
-
-        calculate_quantization_params(graph, fw_impl, self.representative_data_gen, hessian_info_service=hessian_info_service)
+        calculate_quantization_params(graph, fw_impl, self.representative_data_gen)
 
         for node in graph.nodes:
             for candidate_qc in node.candidates_quantization_cfg:
