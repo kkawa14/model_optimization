@@ -908,6 +908,7 @@ class Graph(nx.MultiDiGraph, GraphSearches):
         """
         Disable activation quantization for all nodes in fused operations,
         except for the last node in each fused group.
+        Update the value of quantization_config with the value of op_quaitization_cfg from FusingInfo.
         """
         nodes_to_disable = self.fusing_info.get_inner_fln_nodes()
         for node in nodes_to_disable:
