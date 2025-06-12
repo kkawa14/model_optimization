@@ -97,9 +97,7 @@ def filter_node_candidates(node: BaseNode, fw_info) -> List[CandidateNodeQuantiz
         single_dummy_candidate = filtered_candidates[0]
         single_dummy_candidate.activation_quantization_cfg.activation_n_bits = FLOAT_BITWIDTH
         single_dummy_candidate.activation_quantization_cfg.activation_quantization_method = QuantizationMethod.POWER_OF_TWO
-        activation_quantization_fn = get_activation_quantization_params_fn(QuantizationMethod.POWER_OF_TWO)
-        single_dummy_candidate.activation_quantization_cfg.activation_quantization_params_fn = activation_quantization_fn
-
+        single_dummy_candidate.activation_quantization_cfg.activation_quantization_params_fn = get_activation_quantization_params_fn(QuantizationMethod.POWER_OF_TWO)
 
         if kernel_attr is not None:
             kernel_config = single_dummy_candidate.weights_quantization_cfg.get_attr_config(kernel_attr)
