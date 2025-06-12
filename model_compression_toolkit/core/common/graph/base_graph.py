@@ -38,7 +38,6 @@ from model_compression_toolkit.logger import Logger
 from model_compression_toolkit.target_platform_capabilities.targetplatform2framework import LayerFilterParams
 from model_compression_toolkit.target_platform_capabilities.targetplatform2framework.framework_quantization_capabilities import \
     FrameworkQuantizationCapabilities
-import pprint
 from model_compression_toolkit.core.common.quantization.quantization_params_fn_selection import \
     get_activation_quantization_params_fn
 
@@ -914,16 +913,10 @@ class Graph(nx.MultiDiGraph, GraphSearches):
         for node in nodes_to_disable:
             fused_node_op_id = self.fusing_info.get_fused_op_id_for_node(node.name)
             fusiong_op_quaitization_cfg = self.fusing_info.get_fused_op_quantization_config(fused_node_op_id) 
-            print("\nnode.name", node.name)
-            print("fused_node_op_id", fused_node_op_id)
             for qc in node.candidates_quantization_cfg:
                 actq_cfg = qc.activation_quantization_cfg
-                #print("\nqc\n", qc)
-                
-                print("qc.activation_quantization_method ", actq_cfg.activation_quantization_method)
-
-                #pprint.pprint(qc)           
                 if fusiong_op_quaitization_cfg is not None:
+                    # Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
                     activation_n_bits = fusiong_op_quaitization_cfg.activation_n_bits
                     signedness = fusiong_op_quaitization_cfg.signedness
                     activation_quantization_method = fusiong_op_quaitization_cfg.activation_quantization_method
@@ -933,17 +926,9 @@ class Graph(nx.MultiDiGraph, GraphSearches):
                     actq_cfg.activation_n_bits = activation_n_bits
                     actq_cfg.signedness = signedness
                     actq_cfg.activation_quantization_method = activation_quantization_method
-                    #actq_cfg.activation_quantization_fn = activation_quantization_fn
                     actq_cfg.activation_quantization_params_fn = activation_quantization_fn
-                    
-                    print("Nwe qc.activation_quantization_method ", actq_cfg.activation_quantization_method)
-                    #pprint.pprint(qc)   
                 else:
-                    print("fusiong_op_quaitization_cfgは存在しません。")
                     actq_cfg.quant_mode = ActivationQuantizationMode.FLN_NO_QUANT
-
-                    
-        # List型かそのままか？
 
     def validate(self):
         """

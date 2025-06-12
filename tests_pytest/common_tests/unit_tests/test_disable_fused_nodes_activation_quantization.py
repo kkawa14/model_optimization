@@ -30,10 +30,8 @@ from model_compression_toolkit.core.common.quantization.quantization_params_gene
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.power_of_two_selection import power_of_two_selection_histogram
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.symmetric_selection import symmetric_selection_histogram
 from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import Signedness
-
 from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
 from tests_pytest._test_util.graph_builder_utils import build_nbits_qc as build_qc
-import pprint
 import copy
 
 
@@ -185,20 +183,15 @@ class Test_disable_fused_nodes_activation_quantization:
                                      'actq_method': QuantizationMethod.LUT_POT_QUANTIZER,
                                      'signedness': Signedness.AUTO}
         exp_actq_cfg_params_dict2 = {'n_bits': 8,
-                                     'actq_params_fn': power_of_two_selection_histogram,
-                                     'actq_method': QuantizationMethod.POWER_OF_TWO}
-        exp_actq_cfg_params_dict3 = {'n_bits': 8,
                                      'actq_params_fn': symmetric_selection_histogram,
                                      'actq_method': QuantizationMethod.SYMMETRIC}
-
-
 
         ### Expected candidates when transformed by the qcfg of FusingInfo
         conv_1_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1)]
         ### Expected values when unchanged
         relu_1_qc_cfg = [exp_candidate_base1]
         ### Expected candidates when transformed by FusingInfo where qcfg is None
-        conv_2_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict3)]
+        conv_2_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict2)]
         ### Expected values when unchanged
         tanh_qc_cfg   = [exp_candidate_base1]
         ### Expected candidates with multiple configurations when transformed by the qcfg of FusingInfo
@@ -207,7 +200,7 @@ class Test_disable_fused_nodes_activation_quantization:
         ### Expected values when unchanged
         relu_2_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
         ### Expected candidates when transformed with preserving set to True
-        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict3)]
+        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict2)]
         ### Expected values when unchanged
         linear_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
 
@@ -223,14 +216,6 @@ class Test_disable_fused_nodes_activation_quantization:
         for test_c, exp_c in zip(candidates, exp_candidates):
             test_actq_cfg = test_c.activation_quantization_cfg
             exp_actq_cfg = exp_c.activation_quantization_cfg
-            
-            #print("test_actq_cfg.activation_n_bits", test_actq_cfg.activation_n_bits)
-            #print("exp_actq_cfg.activation_n_bits", exp_actq_cfg.activation_n_bits)
-            #print("test_actq_cfg.activation_quantization_method", test_actq_cfg.activation_quantization_method)
-            #print("exp_actq_cfg.activation_quantization_method", exp_actq_cfg.activation_quantization_method)
-            #print("test_actq_cfg.activation_quantization_params_fn", test_actq_cfg.activation_quantization_params_fn)
-            #print("exp_actq_cfg.activation_quantization_params_fn", exp_actq_cfg.activation_quantization_params_fn)
-             
             assert test_actq_cfg.activation_n_bits == exp_actq_cfg.activation_n_bits
             assert test_actq_cfg.activation_quantization_method == exp_actq_cfg.activation_quantization_method
             assert test_actq_cfg.activation_quantization_params_fn == exp_actq_cfg.activation_quantization_params_fn
@@ -238,7 +223,7 @@ class Test_disable_fused_nodes_activation_quantization:
 
     def test_disable_fused_nodes_activation_quantization(self, fusing_info_generator_with_qconfig):
         """
-        Test the filter_nodes_candidates function for a graph with multiple nodes and configurations.
+        Test the disable_fused_nodes_activation_quantizatio function for a graph with multiple nodes and configurations.
         """
         graph = self.graph
         fw_info = self.fw_info
@@ -247,44 +232,9 @@ class Test_disable_fused_nodes_activation_quantization:
         graph.fw_info = fw_info
         graph.fusing_info = fusing_info_generator_with_qconfig.generate_fusing_info(graph)
 
-        print("\n 変更前ーーーーーーーーーーーー")
-        for node in list(graph.nodes):
-            print("\nnode.name", node.name)
-            for qc in node.candidates_quantization_cfg:
-                actq_cfg = qc.activation_quantization_cfg
-                if hasattr(actq_cfg, 'activation_quantization_method'):
-                    print("qc.activation_quantization_method", actq_cfg.activation_quantization_method)
-                    print("qc.quant_mode", actq_cfg.quant_mode)
-                else:
-                    print("qc.activation_quantization_methodは存在しません。")
-
-        print("\n disable_fused_nodes_activation_quantization()ーーーーーーーーーーーー")
+        # call function disable_fused_nodes_activation_quantization
         graph.disable_fused_nodes_activation_quantization()
 
-        print("\n 変更後ーーーーーーーーーーーー")
-        for node in list(graph.nodes):
-            print("\nnode.name", node.name)
-            for qc in node.candidates_quantization_cfg:
-                actq_cfg = qc.activation_quantization_cfg
-                if hasattr(actq_cfg, 'activation_quantization_method'):
-                    print("qc.activation_quantization_method", actq_cfg.activation_quantization_method)
-                    print("qc.quant_mode", actq_cfg.quant_mode)
-                else:
-                    print("qc.activation_quantization_methodは存在しません。")
-                    
-        print("\n nodes_to_disableーーーーーーーーーーーー")
-        nodes_to_disable = graph.fusing_info.get_inner_fln_nodes()
-        for node in nodes_to_disable:
-            print("\nnode.name", node.name)
-            for qc in node.candidates_quantization_cfg:
-                actq_cfg = qc.activation_quantization_cfg
-                if hasattr(actq_cfg, 'activation_quantization_method'):
-                    print("qc.activation_quantization_method", actq_cfg.activation_quantization_method)
-                else:
-                    print("qc.activation_quantization_methodは存在しません。")
-
-        print("\n Check ーーーーーーーーーーーー")
         ### Check if the ActivationQuantization settings set on the graph nodes match the expected values
         for node, exp_qc in zip(list(graph.nodes), self.exp_filter_nodes_candidates):
-            print("\nnode.name", node.name)
             self.check_candidates_activation_qcfg(node.candidates_quantization_cfg, exp_qc)
