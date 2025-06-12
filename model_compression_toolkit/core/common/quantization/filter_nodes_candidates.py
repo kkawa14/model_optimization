@@ -111,7 +111,7 @@ def filter_node_candidates(node: BaseNode, fw_info) -> List[CandidateNodeQuantiz
     elif not node.is_activation_quantization_enabled() and not node.is_fln_quantization():
         # Remove candidates that have duplicated weights candidates for node with disabled activation quantization.
         # Replacing the activation n_bits in the remained configurations with default value to prevent confusion.
-        # コメント追加
+        # Set the config of the non-quantized FLN node to POWER_OF_TWO.
         seen_candidates = set()
         filtered_candidates = [candidate for candidate in filtered_candidates if
                                candidate.weights_quantization_cfg not in seen_candidates
