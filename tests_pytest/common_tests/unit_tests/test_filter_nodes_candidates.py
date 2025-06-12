@@ -67,12 +67,12 @@ def create_mock_base_node(name: str, layer_class: str,
     Function for creating the mock nodes required for a simple neural network structure.
     """
 
-    dummy_initalize = {'framework_attr': {},
+    dummy_initialize = {'framework_attr': {},
                        'input_shape': (),
                        'output_shape': (),
                        'weights': {}}
 
-    real_node = BaseNode(name=name, layer_class=layer_class, **dummy_initalize)
+    real_node = BaseNode(name=name, layer_class=layer_class, **dummy_initialize)
 
     node = Mock(spec=real_node)
     node.is_match_type = real_node.is_match_type
