@@ -175,11 +175,10 @@ class TestFilterNodesCandidates:
         exp_candidate_base2 = build_qc(a_nbits=4, a_enable=True, w_attr={'weight': (4, True)},
                                         activation_quantization_fn=symmetric_selection_histogram,
                                         activation_quantization_method=QuantizationMethod.SYMMETRIC)
-        
-        exp_actq_cfg_params_dict1 = {'n_bits': 4,
-                                     'actq_params_fn': lut_kmeans_histogram,
-                                     'actq_method': QuantizationMethod.LUT_POT_QUANTIZER,
-                                     'signedness': Signedness.AUTO}
+
+        exp_actq_cfg_params_dict1 = {'n_bits': 8,
+                                     'actq_params_fn': symmetric_selection_histogram,
+                                     'actq_method': QuantizationMethod.SYMMETRIC}       
         
         exp_actq_cfg_params_dict2 = {'n_bits': FLOAT_BITWIDTH,
                                      'actq_params_fn': power_of_two_selection_histogram,
@@ -187,19 +186,15 @@ class TestFilterNodesCandidates:
         
         exp_actq_cfg_params_dict3 = {'n_bits': 8,
                                      'actq_params_fn': symmetric_selection_histogram,
-                                     'actq_method': QuantizationMethod.SYMMETRIC}
-        
-        exp_actq_cfg_params_dict4 = {'n_bits': 8,
-                                     'actq_params_fn': symmetric_selection_histogram,
                                      'actq_method': QuantizationMethod.SYMMETRIC}       
         
-        exp_actq_cfg_params_dict5 = {'n_bits': 4,
+        exp_actq_cfg_params_dict4 = {'n_bits': 4,
                                      'actq_params_fn': symmetric_selection_histogram,
                                      'actq_method': QuantizationMethod.SYMMETRIC}             
         
 
         ### Expected candidates when transformed by the qcfg of FusingInfo
-        conv_1_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict3)]
+        conv_1_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1)]
         ### Expected values when unchanged
         relu_1_qc_cfg = [exp_candidate_base1]
         ### Expected candidates when transformed by FusingInfo where qcfg is None
@@ -207,8 +202,8 @@ class TestFilterNodesCandidates:
         ### Expected values when unchanged
         tanh_qc_cfg   = [exp_candidate_base1]
         ### Expected candidates with multiple configurations when transformed by the qcfg of FusingInfo
-        conv_3_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict4),
-                         create_exp_candidate_cfg(exp_candidate_base2, **exp_actq_cfg_params_dict5)]
+        conv_3_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict3),
+                         create_exp_candidate_cfg(exp_candidate_base2, **exp_actq_cfg_params_dict4)]
         ### Expected values when unchanged
         relu_2_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
         ### Expected candidates when transformed with preserving set to True
@@ -228,22 +223,10 @@ class TestFilterNodesCandidates:
         for test_c, exp_c in zip(candidates, exp_candidates):
             test_actq_cfg = test_c.activation_quantization_cfg
             exp_actq_cfg = exp_c.activation_quantization_cfg
-
-            print("test_actq_cfg.activation_n_bits", test_actq_cfg.activation_n_bits)
-            print("exp_actq_cfg.activation_n_bits", exp_actq_cfg.activation_n_bits)
-            print("test_actq_cfg.activation_quantization_method", test_actq_cfg.activation_quantization_method)
-            print("exp_actq_cfg.activation_quantization_method", exp_actq_cfg.activation_quantization_method)
-            print("test_actq_cfg.activation_quantization_params_fn", test_actq_cfg.activation_quantization_params_fn)
-            print("exp_actq_cfg.activation_quantization_params_fn", exp_actq_cfg.activation_quantization_params_fn)
-            #print("test_actq_cfg.activation_quantization_fn", test_actq_cfg.activation_quantization_fn)
-            #print("exp_actq_cfg.activation_quantization_fn", exp_actq_cfg.activation_quantization_fn)
-
-            #assert test_actq_cfg.activation_quantization_fn == exp_actq_cfg.activation_quantization_fn
             assert test_actq_cfg.activation_n_bits == exp_actq_cfg.activation_n_bits
             assert test_actq_cfg.activation_quantization_method == exp_actq_cfg.activation_quantization_method
             assert test_actq_cfg.activation_quantization_params_fn == exp_actq_cfg.activation_quantization_params_fn
             assert test_actq_cfg.signedness == exp_actq_cfg.signedness
-
 
     def test_filter_nodes_candidates_updates_node_activation_quantization_config(self, fusing_info_generator_with_qconfig):
         """
@@ -256,9 +239,9 @@ class TestFilterNodesCandidates:
         graph.fw_info = fw_info
         graph.fusing_info = fusing_info_generator_with_qconfig.generate_fusing_info(graph)
 
-        output_graph = filter_nodes_candidates(graph)
+        # call function filter_nodes_candidates
+        filter_nodes_candidates(graph)
 
         ### Check if the ActivationQuantization settings set on the graph nodes match the expected values
         for node, exp_qc in zip(list(graph.nodes), self.exp_filter_nodes_candidates):
-            print("\nnode.name", node.name)
             self.check_candidates_activation_qcfg(node.candidates_quantization_cfg, exp_qc)
