@@ -917,14 +917,12 @@ class Graph(nx.MultiDiGraph, GraphSearches):
                 actq_cfg = qc.activation_quantization_cfg
                 if fusiong_op_quaitization_cfg is not None:
                     # Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
-                    activation_n_bits = fusiong_op_quaitization_cfg.activation_n_bits
-                    signedness = fusiong_op_quaitization_cfg.signedness
                     activation_quantization_method = fusiong_op_quaitization_cfg.activation_quantization_method
                     activation_quantization_fn = get_activation_quantization_params_fn(activation_quantization_method)
                     
                     actq_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
-                    actq_cfg.activation_n_bits = activation_n_bits
-                    actq_cfg.signedness = signedness
+                    actq_cfg.activation_n_bits = fusiong_op_quaitization_cfg.activation_n_bits
+                    actq_cfg.signedness = fusiong_op_quaitization_cfg.signedness
                     actq_cfg.activation_quantization_method = activation_quantization_method
                     actq_cfg.activation_quantization_params_fn = activation_quantization_fn
                 else:
