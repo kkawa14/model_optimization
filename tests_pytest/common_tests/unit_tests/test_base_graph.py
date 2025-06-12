@@ -58,7 +58,7 @@ class TestGraph:
     @pytest.fixture(autouse=True)
     def setup_mock_graph_and_nodes(self):
         """
-        Set up mock objects for testing the filter_nodes_candidates modules.
+        Set up mock objects for testing the disable_fused_nodes_activation_quantization modules.
 
         Mocks the behavior of nodes in a graph that support activation and weight quantization settings.
         Creates a graph containing nodes with multiple quantization candidates
@@ -119,7 +119,7 @@ class TestGraph:
     @pytest.fixture(autouse=True)
     def expected_candidates_fixture(self):
         """
-        Set up and create expected values and candidates for tests related to the filter_nodes_candidates modules.
+        Set up and create expected values and candidates for tests related to the disable_fused_nodes_activation_quantization modules.
         """
         def create_exp_candidate_cfg(candidate, n_bits, actq_params_fn, actq_method, signedness=None):
             ret_candidate = deepcopy(candidate)
@@ -134,7 +134,7 @@ class TestGraph:
             
             return ret_candidate
 
-        ### expected is test_filter_nodes_candidates 
+        ### expected is test_disable_fused_nodes_activation_quantization 
         exp_candidate_base1 = build_qc(a_nbits=8, a_enable=True, w_attr={'weight': (8, True)},
                                         activation_quantization_fn=symmetric_selection_histogram,
                                         activation_quantization_method=QuantizationMethod.SYMMETRIC)
