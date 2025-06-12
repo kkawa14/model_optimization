@@ -15,25 +15,21 @@
 from copy import deepcopy 
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 from mct_quantizers import QuantizationMethod
-from model_compression_toolkit.core import QuantizationErrorMethod
-from model_compression_toolkit.core.common import DEFAULTCONFIG, Graph, BaseNode
+from model_compression_toolkit.core.common import Graph
 from model_compression_toolkit.core.common.fusion.fusing_info import FusingInfoGenerator
 from model_compression_toolkit.core.common.graph.base_graph import OutTensor
 from model_compression_toolkit.core.common.graph.edge import Edge
-from model_compression_toolkit.core.common.quantization.filter_nodes_candidates import filter_nodes_candidates, filter_node_candidates
-from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
-from model_compression_toolkit.constants import FUSED_LAYER_PATTERN, FUSED_OP_QUANT_CONFIG, FLOAT_BITWIDTH
+from model_compression_toolkit.constants import FUSED_LAYER_PATTERN, FUSED_OP_QUANT_CONFIG
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.lut_kmeans_params import lut_kmeans_histogram
-from model_compression_toolkit.core.common.quantization.quantization_params_generation.power_of_two_selection import power_of_two_selection_histogram
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.symmetric_selection import symmetric_selection_histogram
 from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import Signedness
 from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
 from tests_pytest._test_util.graph_builder_utils import build_nbits_qc as build_qc
+from tests_pytest.common_tests.unit_tests.test_filter_nodes_candidates import create_mock_base_node
 import copy
-
 
 # Setup TEST_QC and TEST_QCO for testing.
 TEST_QC = generate_test_op_qc(**generate_test_attr_configs(),
@@ -56,38 +52,6 @@ def fusing_info_generator_with_qconfig(fusing_patterns_with_qconfig):
     Creates a FusingInfoGenerator using the fusing patterns.
     """
     return FusingInfoGenerator(fusing_patterns_with_qconfig)
-
-
-def create_mock_base_node(name: str, layer_class: str,
-                          is_weights_quantization_enabled: bool = False,
-                          is_activation_quantization_enabled: bool = False,
-                          is_fln_quantization: bool = False,
-                          is_quantization_preserving: bool = False,
-                          candidates_quantization_cfg: CandidateNodeQuantizationConfig = None):
-    """
-    Function for creating the mock nodes required for a simple neural network structure.
-    """
-
-    dummy_initalize = {'framework_attr': {},
-                       'input_shape': (),
-                       'output_shape': (),
-                       'weights': {}}
-
-    real_node = BaseNode(name=name, layer_class=layer_class, **dummy_initalize)
-
-    node = Mock(spec=real_node)
-    node.is_match_type = real_node.is_match_type
-    node.layer_class = layer_class
-    node.name = name
-
-    node.candidates_quantization_cfg = candidates_quantization_cfg
-
-    node.is_weights_quantization_enabled.return_value = is_weights_quantization_enabled
-    node.is_activation_quantization_enabled.return_value = is_activation_quantization_enabled
-    node.is_quantization_preserving.return_value = is_quantization_preserving 
-    node.is_fln_quantization.return_value = is_fln_quantization
-
-    return node
 
 
 class TestGraph:
