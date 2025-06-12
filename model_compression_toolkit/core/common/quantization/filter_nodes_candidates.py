@@ -118,8 +118,7 @@ def filter_node_candidates(node: BaseNode, fw_info) -> List[CandidateNodeQuantiz
         for c in filtered_candidates:
             c.activation_quantization_cfg.activation_n_bits = FLOAT_BITWIDTH
             c.activation_quantization_cfg.activation_quantization_method = QuantizationMethod.POWER_OF_TWO
-            activation_quantization_fn = get_activation_quantization_params_fn(QuantizationMethod.POWER_OF_TWO)
-            c.activation_quantization_cfg.activation_quantization_params_fn = activation_quantization_fn
+            c.activation_quantization_cfg.activation_quantization_params_fn = get_activation_quantization_params_fn(QuantizationMethod.POWER_OF_TWO)
 
         final_candidates = _filter_bit_method_dups(filtered_candidates, kernel_attr)
 
