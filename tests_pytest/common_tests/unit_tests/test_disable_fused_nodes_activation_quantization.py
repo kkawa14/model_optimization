@@ -90,7 +90,7 @@ def create_mock_base_node(name: str, layer_class: str,
     return node
 
 
-class Test_disable_fused_nodes_activation_quantization:
+class TestGraph:
     @pytest.fixture(autouse=True)
     def setup_mock_graph_and_nodes(self):
         """
