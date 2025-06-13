@@ -29,6 +29,7 @@ from model_compression_toolkit.target_platform_capabilities.schema.mct_current_s
 from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
 from tests_pytest._test_util.graph_builder_utils import build_nbits_qc as build_qc
 from tests_pytest.common_tests.unit_tests.test_filter_nodes_candidates import create_mock_base_node
+from model_compression_toolkit.core.common.quantization.node_quantization_config import ActivationQuantizationMode
 import copy
 
 # Setup TEST_QC and TEST_QCO for testing.
@@ -121,10 +122,11 @@ class TestGraph:
         """
         Set up and create expected values and candidates for tests related to the disable_fused_nodes_activation_quantization modules.
         """
-        def create_exp_candidate_cfg(candidate, n_bits, actq_params_fn, actq_method, signedness=None):
+        def create_exp_candidate_cfg(candidate, quant_mode, n_bits, actq_params_fn, actq_method, signedness=None):
             ret_candidate = deepcopy(candidate)
             ret_c_actq_cfg = ret_candidate.activation_quantization_cfg
 
+            ret_c_actq_cfg.quant_mode = quant_mode    
             ret_c_actq_cfg.activation_n_bits = n_bits
             ret_c_actq_cfg.activation_quantization_fn = actq_params_fn   ### same as the activation_quantization_params_fn
             ret_c_actq_cfg.activation_quantization_method = actq_method
@@ -142,13 +144,22 @@ class TestGraph:
                                         activation_quantization_fn=symmetric_selection_histogram,
                                         activation_quantization_method=QuantizationMethod.SYMMETRIC)
         
-        exp_actq_cfg_params_dict1 = {'n_bits': 4,
+        exp_actq_cfg_params_dict1 = {'quant_mode': ActivationQuantizationMode.FLN_QUANT,
+                                     'n_bits': 4,
                                      'actq_params_fn': lut_kmeans_histogram,
                                      'actq_method': QuantizationMethod.LUT_POT_QUANTIZER,
                                      'signedness': Signedness.AUTO}
-        exp_actq_cfg_params_dict2 = {'n_bits': 8,
+        
+        exp_actq_cfg_params_dict2 = {'quant_mode':ActivationQuantizationMode.FLN_NO_QUANT,
+                                     'n_bits': 8,
                                      'actq_params_fn': symmetric_selection_histogram,
                                      'actq_method': QuantizationMethod.SYMMETRIC}
+
+        exp_actq_cfg_params_dict3 = {'quant_mode':ActivationQuantizationMode.QUANT,
+                                     'n_bits': 8,
+                                     'actq_params_fn': symmetric_selection_histogram,
+                                     'actq_method': QuantizationMethod.SYMMETRIC}
+
 
         ### Expected candidates when transformed by the qcfg of FusingInfo
         conv_1_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1)]
@@ -164,7 +175,7 @@ class TestGraph:
         ### Expected values when unchanged
         relu_2_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
         ### Expected candidates when transformed with preserving set to True
-        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict2)]
+        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict3)]
         ### Expected values when unchanged
         linear_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
 
@@ -180,6 +191,7 @@ class TestGraph:
         for test_c, exp_c in zip(candidates, exp_candidates):
             test_actq_cfg = test_c.activation_quantization_cfg
             exp_actq_cfg = exp_c.activation_quantization_cfg
+            assert test_actq_cfg.quant_mode == exp_actq_cfg.quant_mode
             assert test_actq_cfg.activation_n_bits == exp_actq_cfg.activation_n_bits
             assert test_actq_cfg.activation_quantization_method == exp_actq_cfg.activation_quantization_method
             assert test_actq_cfg.activation_quantization_params_fn == exp_actq_cfg.activation_quantization_params_fn
