@@ -178,10 +178,10 @@ class TestGraph:
         ### Expected values when unchanged
         linear_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
 
-        self.exp_filter_nodes_candidates = [conv_1_qc_cfg, relu_1_qc_cfg,
-                                            conv_2_qc_cfg, tanh_qc_cfg,
-                                            conv_3_qc_cfg, relu_2_qc_cfg,
-                                            flatten_qc_cfg, linear_qc_cfg]
+        self.exp_node_config_list = [conv_1_qc_cfg, relu_1_qc_cfg,
+                                     conv_2_qc_cfg, tanh_qc_cfg,
+                                     conv_3_qc_cfg, relu_2_qc_cfg,
+                                     flatten_qc_cfg, linear_qc_cfg]
     
     def check_candidates_activation_qcfg(self, candidates, exp_candidates):
         """
@@ -211,5 +211,5 @@ class TestGraph:
         graph.disable_fused_nodes_activation_quantization()
 
         ### Check if the ActivationQuantization settings set on the graph nodes match the expected values
-        for node, exp_qc in zip(list(graph.nodes), self.exp_filter_nodes_candidates):
+        for node, exp_qc in zip(list(graph.nodes), self.exp_node_config_list):
             self.check_candidates_activation_qcfg(node.candidates_quantization_cfg, exp_qc)
