@@ -160,7 +160,6 @@ class TestGraph:
                                      'actq_params_fn': symmetric_selection_histogram,
                                      'actq_method': QuantizationMethod.SYMMETRIC}
 
-
         ### Expected candidates when transformed by the qcfg of FusingInfo
         conv_1_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1)]
         ### Expected values when unchanged
