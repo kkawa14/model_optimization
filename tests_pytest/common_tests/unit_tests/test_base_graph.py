@@ -27,7 +27,7 @@ from model_compression_toolkit.core.common.quantization.quantization_params_gene
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.symmetric_selection import symmetric_selection_histogram
 from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import Signedness
 from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
-from tests_pytest._test_util.graph_builder_utils import build_nbits_qc as build_qc
+from tests_pytest._test_util.graph_builder_utils import build_nbits_qc_with_quantization_method as build_qc
 from tests_pytest.common_tests.unit_tests.test_filter_nodes_candidates import create_mock_base_node
 from model_compression_toolkit.core.common.quantization.node_quantization_config import ActivationQuantizationMode
 import copy
@@ -74,7 +74,7 @@ class TestGraph:
         candidate2 = build_qc(a_nbits=4, a_enable=True, w_attr={'weight': (4, True)}, q_preserving=False,
                             activation_quantization_fn=symmetric_selection_histogram,
                             activation_quantization_method=QuantizationMethod.SYMMETRIC)
-        
+
         candidate_single  = [candidate1]
         candidates_multiple = [candidate1, candidate2]
 

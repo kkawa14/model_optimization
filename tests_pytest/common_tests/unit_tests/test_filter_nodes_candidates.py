@@ -32,7 +32,7 @@ from model_compression_toolkit.core.common.quantization.quantization_params_gene
 from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import Signedness
 
 from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
-from tests_pytest._test_util.graph_builder_utils import build_nbits_qc as build_qc
+from tests_pytest._test_util.graph_builder_utils import build_nbits_qc_with_quantization_method as build_qc
 
 # Setup TEST_QC and TEST_QCO for testing.
 TEST_QC = generate_test_op_qc(**generate_test_attr_configs(),
