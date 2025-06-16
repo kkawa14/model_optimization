@@ -904,7 +904,7 @@ class Graph(nx.MultiDiGraph, GraphSearches):
 
         return intermediate_nodes, next_node
 
-    def disable_fused_nodes_activation_quantization(self):
+    def override_fused_node_activation_quantization_candidates(self):
         """
         Disable activation quantization for all nodes in fused operations,
         except for the last node in each fused group.

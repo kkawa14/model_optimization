@@ -196,7 +196,7 @@ class TestGraph:
             assert test_actq_cfg.activation_quantization_params_fn == exp_actq_cfg.activation_quantization_params_fn
             assert test_actq_cfg.signedness == exp_actq_cfg.signedness
 
-    def test_disable_fused_nodes_activation_quantization(self, fusing_info_generator_with_qconfig):
+    def test_override_fused_node_activation_quantization_candidates(self, fusing_info_generator_with_qconfig):
         """
         Test the disable_fused_nodes_activation_quantizatio function for a graph with multiple nodes and configurations.
         """
@@ -208,7 +208,7 @@ class TestGraph:
         graph.fusing_info = fusing_info_generator_with_qconfig.generate_fusing_info(graph)
 
         # call function disable_fused_nodes_activation_quantization
-        graph.disable_fused_nodes_activation_quantization()
+        graph.override_fused_node_activation_quantization_candidates()
 
         ### Check if the ActivationQuantization settings set on the graph nodes match the expected values
         for node, exp_qc in zip(list(graph.nodes), self.exp_node_config_list):
