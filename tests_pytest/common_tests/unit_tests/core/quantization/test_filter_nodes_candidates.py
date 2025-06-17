@@ -34,6 +34,8 @@ def create_mock_base_node(name: str, layer_class: str,
                           is_activation_quantization_enabled: bool = False,
                           is_fln_quantization: bool = False,
                           is_quantization_preserving: bool = False,
+                          is_no_quant: bool = False,
+                          is_fln_no_quant: bool = False,
                           candidates_quantization_cfg: CandidateNodeQuantizationConfig = None):
     """
     Function for creating the mock nodes required for a simple neural network structure.
@@ -57,6 +59,8 @@ def create_mock_base_node(name: str, layer_class: str,
     node.is_activation_quantization_enabled.return_value = is_activation_quantization_enabled
     node.is_quantization_preserving.return_value = is_quantization_preserving 
     node.is_fln_quantization.return_value = is_fln_quantization
+    node.is_no_quant.return_value = is_no_quant
+    node.is_fln_no_quant.return_value = is_fln_no_quant
 
     return node
 
@@ -87,27 +91,35 @@ class TestFilterNodesCandidates:
         mock_nodes_list = []
         mock_nodes_list.append(create_mock_base_node(name='conv_1', layer_class='Conv2d', 
                                                     is_weights_quantization_enabled=True, is_fln_quantization=True,
+                                                    is_no_quant=False, is_fln_no_quant=False,
                                                     candidates_quantization_cfg=candidate_single))
         mock_nodes_list.append(create_mock_base_node(name='relu_1', layer_class='ReLU', 
                                                     is_activation_quantization_enabled=True,
+                                                    is_no_quant=False, is_fln_no_quant=False,
                                                     candidates_quantization_cfg=candidate_single))
         mock_nodes_list.append(create_mock_base_node(name='conv_2', layer_class='Conv2d', 
                                                     is_weights_quantization_enabled=True, is_fln_quantization=False,
+                                                    is_no_quant=False, is_fln_no_quant=True,                                                                                                        
                                                     candidates_quantization_cfg=candidate_single))
         mock_nodes_list.append(create_mock_base_node(name='tanh', layer_class='Tanh', 
                                                     is_activation_quantization_enabled=True,
+                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
                                                     candidates_quantization_cfg=candidate_single))
         mock_nodes_list.append(create_mock_base_node(name='conv_3', layer_class='Conv2d', 
                                                     is_weights_quantization_enabled=True, is_fln_quantization=True,
+                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
                                                     candidates_quantization_cfg=candidates_multiple))
         mock_nodes_list.append(create_mock_base_node(name='relu_2', layer_class='ReLU', 
                                                     is_activation_quantization_enabled=True,
+                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
                                                     candidates_quantization_cfg=candidates_multiple))
         mock_nodes_list.append(create_mock_base_node(name='flatten', layer_class='Flatten', 
                                                     is_quantization_preserving=True,
+                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
                                                     candidates_quantization_cfg=candidate_single))
         mock_nodes_list.append(create_mock_base_node(name='linear', layer_class='Linear', 
                                                     is_weights_quantization_enabled=True, is_activation_quantization_enabled=True,
+                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
                                                     candidates_quantization_cfg=candidates_multiple))
         self.mock_node = mock_nodes_list
 
@@ -178,7 +190,7 @@ class TestFilterNodesCandidates:
         ### Expected values when unchanged
         relu_2_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
         ### Expected candidates when transformed with preserving set to True
-        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict2)]
+        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1)]
         ### Expected values when unchanged
         linear_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
 
