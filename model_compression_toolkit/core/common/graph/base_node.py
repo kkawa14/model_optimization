@@ -142,7 +142,7 @@ class BaseNode:
 
     def is_fln_no_quant(self) -> bool:
         """
-        Returns: Whether FLN node is no quantization.
+        Returns: Whether node is FLN no quantization.
         """
         return self._is_single_quant_mode(ActivationQuantizationMode.FLN_NO_QUANT)
 
