@@ -910,22 +910,45 @@ class Graph(nx.MultiDiGraph, GraphSearches):
         except for the last node in each fused group.
         Update the value of quantization_config with the value of op_quaitization_cfg from FusingInfo.
         """
+ #      nodes_to_disable = self.fusing_info.get_inner_fln_nodes()
+ #      for node in nodes_to_disable:
+ #          print("node", node.name)
+ #          fused_node_op_id = self.fusing_info.get_fused_op_id_for_node(node.name)
+ #          fusiong_op_quaitization_cfg = self.fusing_info.get_fused_op_quantization_config(fused_node_op_id) 
+ #          for qc in node.candidates_quantization_cfg:
+ #              actq_cfg = qc.activation_quantization_cfg
+ #              if fusiong_op_quaitization_cfg is not None:
+ #                  print("FLN_QUANT")
+ #                  # Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
+ #                  actq_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
+ #                  actq_cfg.activation_n_bits = fusiong_op_quaitization_cfg.activation_n_bits
+ #                  actq_cfg.signedness = fusiong_op_quaitization_cfg.signedness
+ #                  actq_cfg.activation_quantization_method = fusiong_op_quaitization_cfg.activation_quantization_method
+ #                  actq_cfg.activation_quantization_params_fn = get_activation_quantization_params_fn(fusiong_op_quaitization_cfg.activation_quantization_method)
+ #              else:
+ #                  print("FLN_NO_QUANT")
+ #                  actq_cfg.quant_mode = ActivationQuantizationMode.FLN_NO_QUANT
+ 
         nodes_to_disable = self.fusing_info.get_inner_fln_nodes()
         for node in nodes_to_disable:
             fused_node_op_id = self.fusing_info.get_fused_op_id_for_node(node.name)
             fusiong_op_quaitization_cfg = self.fusing_info.get_fused_op_quantization_config(fused_node_op_id) 
-            for qc in node.candidates_quantization_cfg:
-                actq_cfg = qc.activation_quantization_cfg
-                if fusiong_op_quaitization_cfg is not None:
-                    # Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
+            if fusiong_op_quaitization_cfg is not None:
+
+                for qc in node.candidates_quantization_cfg:
+                    actq_cfg = qc.activation_quantization_cfg
+                	# Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
                     actq_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
                     actq_cfg.activation_n_bits = fusiong_op_quaitization_cfg.activation_n_bits
                     actq_cfg.signedness = fusiong_op_quaitization_cfg.signedness
                     actq_cfg.activation_quantization_method = fusiong_op_quaitization_cfg.activation_quantization_method
                     actq_cfg.activation_quantization_params_fn = get_activation_quantization_params_fn(fusiong_op_quaitization_cfg.activation_quantization_method)
-                else:
+                node.candidates_quantization_cfg = [node.candidates_quantization_cfg[0]]
+            else:
+                for qc in node.candidates_quantization_cfg:
+                    actq_cfg = qc.activation_quantization_cfg
                     actq_cfg.quant_mode = ActivationQuantizationMode.FLN_NO_QUANT
-
+	
     def validate(self):
         """
         Validate that the current state of the graph is consistent with
