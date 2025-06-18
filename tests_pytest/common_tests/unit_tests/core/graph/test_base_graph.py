@@ -26,13 +26,12 @@ from model_compression_toolkit.target_platform_capabilities.schema.mct_current_s
 from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
 from model_compression_toolkit.core.common.quantization.node_quantization_config import ActivationQuantizationMode, NodeActivationQuantizationConfig
 from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
-
-
+from model_compression_toolkit.core.common.quantization.quantization_params_generation.lut_kmeans_params import lut_kmeans_histogram
+    
 # Setup TEST_QC and TEST_QCO for testing.
 TEST_QC = generate_test_op_qc(**generate_test_attr_configs(),
-                              activation_n_bits=4,
+                              activation_n_bits=16,
                               activation_quantization_method=QuantizationMethod.LUT_POT_QUANTIZER)
-
 
 def build_mock_fusing_info(nodes):
     """
@@ -43,7 +42,6 @@ def build_mock_fusing_info(nodes):
     fusing_info.get_inner_fln_nodes.return_value = [nodes[0], nodes[1]]
     fusing_info.get_fused_op_quantization_config.side_effect = [TEST_QC, None]
     return fusing_info
-
 
 def build_mock_node(name, layer_class):
     """
@@ -89,6 +87,8 @@ class TestGraph:
         nodes = list(graph.nodes)
         
         assert nodes[0].candidates_quantization_cfg[0].activation_quantization_cfg.quant_mode == ActivationQuantizationMode.FLN_QUANT
-        assert nodes[0].candidates_quantization_cfg[0].activation_quantization_cfg.activation_n_bits == 4
+        assert nodes[0].candidates_quantization_cfg[0].activation_quantization_cfg.activation_n_bits == 16
+        assert nodes[0].candidates_quantization_cfg[0].activation_quantization_cfg.signedness == Signedness.AUTO
         assert nodes[0].candidates_quantization_cfg[0].activation_quantization_cfg.activation_quantization_method == QuantizationMethod.LUT_POT_QUANTIZER
+        assert nodes[0].candidates_quantization_cfg[0].activation_quantization_cfg.activation_quantization_params_fn == lut_kmeans_histogram
         assert nodes[1].candidates_quantization_cfg[0].activation_quantization_cfg.quant_mode == ActivationQuantizationMode.FLN_NO_QUANT
