@@ -64,7 +64,7 @@ def build_mock_node(name, layer_class):
 class TestGraph:
     def test_override_fused_node_activation_quantization_candidates(self):
         """
-        Test the disable_fused_nodes_activation_quantizatio function for a graph with multiple nodes and configurations.
+        Test the override_fused_node_activation_quantization_candidates function for a graph with multiple nodes and configurations.
         """
         ### Create Test Nodes
         mock_nodes = []
