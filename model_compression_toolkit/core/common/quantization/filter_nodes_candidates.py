@@ -86,7 +86,7 @@ def filter_node_candidates(node: BaseNode) -> List[CandidateNodeQuantizationConf
     filtered_candidates = copy.deepcopy(node.candidates_quantization_cfg)
     final_candidates = copy.deepcopy(node.candidates_quantization_cfg)
 
-    if (kernel_attr is None or not node.is_weights_quantization_enabled(kernel_attr)) and (node.is_no_quantization() or node.is_fln_no_quantization()):
+    if (node.kernel_attr is None or not node.is_weights_quantization_enabled(node.kernel_attr)) and (node.is_no_quantization() or node.is_fln_no_quantization()):
         # If activation quantization is disabled and the node doesn't have a kernel or doesn't quantize the kernel,
         # but for some reason the node has multiple candidates then replace it with a single dummy candidate with
         # default bit-width values.
