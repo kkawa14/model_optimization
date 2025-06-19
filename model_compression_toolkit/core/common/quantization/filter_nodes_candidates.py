@@ -20,8 +20,6 @@ from model_compression_toolkit.core.common import Graph, BaseNode
 from model_compression_toolkit.constants import FLOAT_BITWIDTH
 from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import \
     CandidateNodeQuantizationConfig
-from model_compression_toolkit.core.common.quantization.quantization_params_fn_selection import \
-    get_activation_quantization_params_fn
 
 def filter_nodes_candidates(graph: Graph):
     """
