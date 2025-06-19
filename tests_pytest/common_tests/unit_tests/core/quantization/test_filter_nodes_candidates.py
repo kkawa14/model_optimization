@@ -48,36 +48,28 @@ def build_mock_node(name, layer_class, wqe_flag):
 
     return node
 
-
-class Testfilter_node_candidates:
-    @pytest.mark.parametrize(("wqe_flag"), [
-        False,
-        True,   ### QUANT layer : ReLU
-
-    ])
-    def test_filter_node_candidates(self, wqe_flag):
-        """
-        Test the filter_node_candidates function for a graph with multiple nodes and configurations.
-        """
-        ### Create Test Nodes
-        mock_nodes = []
-        mock_nodes.append(build_mock_node(name='conv', layer_class='Conv2d', wqe_flag=wqe_flag))
-
-        ### Create a mock graph
-        ### Note: Generate the graph first because fusing_info cannot be set without it.
-        ###       In the following Mock, use wraps to mock everything except fusing_info.
-        real_graph = Graph("dummy", [], [], [], [])
-        
-        graph = Mock(spec=Graph, wraps=real_graph)
-        graph.nodes = mock_nodes
-
-        ### call override_fused_node_activation_quantization_candidates
-        graph.override_fused_node_activation_quantization_candidates()
-
-        fw_info = Mock()
-        fw_info.get_kernel_op_attributes.return_value = ['weight']
-
-        output_candidates = filter_node_candidates(graph.nodes[0], fw_info)
-
-        assert output_candidates[0].activation_quantization_cfg.activation_n_bits == FLOAT_BITWIDTH
-        assert output_candidates[0].activation_quantization_cfg.activation_quantization_method == QuantizationMethod.POWER_OF_TWO
+@pytest.mark.parametrize(("wqe_flag"), [
+    False,
+    True,   ### QUANT layer : ReLU
+])
+def test_filter_node_candidates(wqe_flag):
+    """
+    Test the filter_node_candidates function for a graph with multiple nodes and configurations.
+    """
+    ### Create Test Nodes
+    mock_nodes = []
+    mock_nodes.append(build_mock_node(name='conv', layer_class='Conv2d', wqe_flag=wqe_flag))
+    ### Create a mock graph
+    ### Note: Generate the graph first because fusing_info cannot be set without it.
+    ###       In the following Mock, use wraps to mock everything except fusing_info.
+    real_graph = Graph("dummy", [], [], [], [])
+    
+    graph = Mock(spec=Graph, wraps=real_graph)
+    graph.nodes = mock_nodes
+    ### call override_fused_node_activation_quantization_candidates
+    graph.override_fused_node_activation_quantization_candidates()
+    fw_info = Mock()
+    fw_info.get_kernel_op_attributes.return_value = ['weight']
+    output_candidates = filter_node_candidates(graph.nodes[0], fw_info)
+    assert output_candidates[0].activation_quantization_cfg.activation_n_bits == FLOAT_BITWIDTH
+    assert output_candidates[0].activation_quantization_cfg.activation_quantization_method == QuantizationMethod.POWER_OF_TWO
