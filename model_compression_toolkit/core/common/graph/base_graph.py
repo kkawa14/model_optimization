@@ -916,8 +916,8 @@ class Graph(nx.MultiDiGraph, GraphSearches):
             fusiong_op_quaitization_cfg = self.fusing_info.get_fused_op_quantization_config(fused_node_op_id) 
             if fusiong_op_quaitization_cfg is not None:
                 for qc in node.candidates_quantization_cfg:
+                    # Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
                     actq_cfg = qc.activation_quantization_cfg
-                	# Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
                     actq_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
                     actq_cfg.activation_n_bits = fusiong_op_quaitization_cfg.activation_n_bits
                     actq_cfg.signedness = fusiong_op_quaitization_cfg.signedness
