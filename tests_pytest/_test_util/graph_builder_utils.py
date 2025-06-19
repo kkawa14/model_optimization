@@ -146,9 +146,6 @@ def build_nbits_qc_with_quantization_method(a_nbits=8, a_enable=True, w_attr=Non
                    activation_quantization_method: QuantizationMethod=QuantizationMethod.POWER_OF_TWO) -> CandidateNodeQuantizationConfig:
     """
     This function is the same as the build_nbits_qc function above, but with the addition of activation_quantization_method.
-
-    Returns:
-
     """
     assert not(a_enable and q_preserving)
 
