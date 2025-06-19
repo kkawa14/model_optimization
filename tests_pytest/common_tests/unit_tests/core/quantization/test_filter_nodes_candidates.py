@@ -15,219 +15,69 @@
 from copy import deepcopy 
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 from mct_quantizers import QuantizationMethod
-from model_compression_toolkit.core.common import DEFAULTCONFIG, Graph, BaseNode
-from model_compression_toolkit.core.common.graph.base_graph import OutTensor
-from model_compression_toolkit.core.common.graph.edge import Edge
-from model_compression_toolkit.core.common.quantization.filter_nodes_candidates import filter_node_candidates
+from model_compression_toolkit.core.common import Graph
+from model_compression_toolkit.core.common.graph.base_node import BaseNode
+from model_compression_toolkit.core.common.quantization.node_quantization_config import ActivationQuantizationMode, NodeActivationQuantizationConfig
 from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
-from model_compression_toolkit.constants import FUSED_LAYER_PATTERN, FUSED_OP_QUANT_CONFIG, FLOAT_BITWIDTH
-from model_compression_toolkit.core.common.quantization.quantization_params_generation.lut_kmeans_params import lut_kmeans_histogram
-from model_compression_toolkit.core.common.quantization.quantization_params_generation.power_of_two_selection import power_of_two_selection_histogram
-from model_compression_toolkit.core.common.quantization.quantization_params_generation.symmetric_selection import symmetric_selection_histogram
-from tests_pytest._test_util.graph_builder_utils import build_nbits_qc_with_quantization_method as build_qc
+from model_compression_toolkit.core.common.quantization.filter_nodes_candidates import filter_node_candidates
+from model_compression_toolkit.constants import FLOAT_BITWIDTH
+from mct_quantizers import QuantizationMethod
 
-def create_mock_base_node(name: str, layer_class: str,
-                          is_weights_quantization_enabled: bool = False,
-                          is_activation_quantization_enabled: bool = False,
-                          is_fln_quantization: bool = False,
-                          is_quantization_preserving: bool = False,
-                          is_no_quant: bool = False,
-                          is_fln_no_quant: bool = False,
-                          candidates_quantization_cfg: CandidateNodeQuantizationConfig = None):
+def build_mock_node(name, layer_class, wqe_flag):
     """
-    Function for creating the mock nodes required for a simple neural network structure.
+    Creates mock nodes representing a simple neural network structure.
     """
-
-    dummy_initialize = {'framework_attr': {},
-                       'input_shape': (),
-                       'output_shape': (),
-                       'weights': {}}
-
-    real_node = BaseNode(name=name, layer_class=layer_class, **dummy_initialize)
-
-    node = Mock(spec=real_node)
-    node.is_match_type = real_node.is_match_type
-    node.layer_class = layer_class
+    node = Mock(spec=BaseNode)
     node.name = name
+    node.layer_class = layer_class
 
-    node.candidates_quantization_cfg = candidates_quantization_cfg
+    node.is_no_quant.return_value = True
+    node.is_fln_no_quant.return_value = False
+    node.is_weights_quantization_enabled.return_value = wqe_flag
 
-    node.is_weights_quantization_enabled.return_value = is_weights_quantization_enabled
-    node.is_activation_quantization_enabled.return_value = is_activation_quantization_enabled
-    node.is_quantization_preserving.return_value = is_quantization_preserving 
-    node.is_fln_quantization.return_value = is_fln_quantization
-    node.is_no_quant.return_value = is_no_quant
-    node.is_fln_no_quant.return_value = is_fln_no_quant
+    activation_quantization_cfg = Mock(spec=NodeActivationQuantizationConfig)
+    activation_quantization_cfg.quant_mode = Mock()
+    candidate_quantization_config = Mock(spec=CandidateNodeQuantizationConfig)
+    candidate_quantization_config.activation_quantization_cfg = activation_quantization_cfg
+    candidate_quantization_config.weights_quantization_cfg = Mock()
+
+    node.candidates_quantization_cfg = [candidate_quantization_config]
 
     return node
 
 
-class TestFilterNodesCandidates:
-    @pytest.fixture(autouse=True)
-    def setup_mock_graph_and_nodes(self):
-        """
-        Set up mock objects for testing the filter_nodes_candidates modules.
+class Testfilter_node_candidates:
+    @pytest.mark.parametrize(("wqe_flag"), [
+        False,
+        True,   ### QUANT layer : ReLU
 
-        Mocks the behavior of nodes in a graph that support activation and weight quantization settings.
-        Creates a graph containing nodes with multiple quantization candidates
-        to test whether the expected configurations are set correctly.
-        """
-
-        self.fw_info = Mock()
-
-        candidate1 = build_qc(a_nbits=8, a_enable=True, w_attr={'weight': (8, True)}, q_preserving=False,
-                            activation_quantization_fn=symmetric_selection_histogram,
-                            activation_quantization_method=QuantizationMethod.SYMMETRIC)
-        candidate2 = build_qc(a_nbits=4, a_enable=True, w_attr={'weight': (4, True)}, q_preserving=False,
-                            activation_quantization_fn=symmetric_selection_histogram,
-                            activation_quantization_method=QuantizationMethod.SYMMETRIC)
-        candidate_single  = [candidate1]
-        candidates_multiple = [candidate1, candidate2]
-
-        # Create Test Nodes
-        mock_nodes_list = []
-        mock_nodes_list.append(create_mock_base_node(name='conv_1', layer_class='Conv2d', 
-                                                    is_weights_quantization_enabled=True, is_fln_quantization=True,
-                                                    is_no_quant=False, is_fln_no_quant=False,
-                                                    candidates_quantization_cfg=candidate_single))
-        mock_nodes_list.append(create_mock_base_node(name='relu_1', layer_class='ReLU', 
-                                                    is_activation_quantization_enabled=True,
-                                                    is_no_quant=False, is_fln_no_quant=False,
-                                                    candidates_quantization_cfg=candidate_single))
-        mock_nodes_list.append(create_mock_base_node(name='conv_2', layer_class='Conv2d', 
-                                                    is_weights_quantization_enabled=True, is_fln_quantization=False,
-                                                    is_no_quant=False, is_fln_no_quant=True,                                                                                                        
-                                                    candidates_quantization_cfg=candidate_single))
-        mock_nodes_list.append(create_mock_base_node(name='tanh', layer_class='Tanh', 
-                                                    is_activation_quantization_enabled=True,
-                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
-                                                    candidates_quantization_cfg=candidate_single))
-        mock_nodes_list.append(create_mock_base_node(name='conv_3', layer_class='Conv2d', 
-                                                    is_weights_quantization_enabled=True, is_fln_quantization=True,
-                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
-                                                    candidates_quantization_cfg=candidates_multiple))
-        mock_nodes_list.append(create_mock_base_node(name='relu_2', layer_class='ReLU', 
-                                                    is_activation_quantization_enabled=True,
-                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
-                                                    candidates_quantization_cfg=candidates_multiple))
-        mock_nodes_list.append(create_mock_base_node(name='flatten', layer_class='Flatten', 
-                                                    is_quantization_preserving=True,
-                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
-                                                    candidates_quantization_cfg=candidate_single))
-        mock_nodes_list.append(create_mock_base_node(name='linear', layer_class='Linear', 
-                                                    is_weights_quantization_enabled=True, is_activation_quantization_enabled=True,
-                                                    is_no_quant=False, is_fln_no_quant=False,                                                                                                        
-                                                    candidates_quantization_cfg=candidates_multiple))
-        self.mock_node = mock_nodes_list
-
-        edges_list = []
-        for i in range(1, len(mock_nodes_list), 1):
-            edges_list.append(Edge(mock_nodes_list[i-1], mock_nodes_list[i], 0, 0))
-
-        # Create a mock graph
-        self.graph = Graph('g',
-                            input_nodes=[mock_nodes_list[0]],
-                            nodes=mock_nodes_list,
-                            output_nodes=[OutTensor(mock_nodes_list[5], 0)],
-                            edge_list=edges_list)
-
-    @pytest.fixture(autouse=True)
-    def expected_candidates_fixture(self):
-        """
-        Set up and create expected values and candidates for tests related to the filter_nodes_candidates modules.
-        """
-        def create_exp_candidate_cfg(candidate, n_bits, actq_params_fn, actq_method, signedness=None):
-            ret_candidate = deepcopy(candidate)
-            ret_c_actq_cfg = ret_candidate.activation_quantization_cfg
-
-            ret_c_actq_cfg.activation_n_bits = n_bits
-            ret_c_actq_cfg.activation_quantization_fn = actq_params_fn   ### same as the activation_quantization_params_fn
-            ret_c_actq_cfg.activation_quantization_method = actq_method
-            ret_c_actq_cfg.activation_quantization_params_fn = actq_params_fn
-            if signedness is not None:
-                ret_c_actq_cfg.signedness = signedness
-            
-            return ret_candidate
-
-        ### expected is test_filter_nodes_candidates 
-        exp_candidate_base1 = build_qc(a_nbits=8, a_enable=True, w_attr={'weight': (8, True)},
-                                        activation_quantization_fn=symmetric_selection_histogram,
-                                        activation_quantization_method=QuantizationMethod.SYMMETRIC)
-        exp_candidate_base2 = build_qc(a_nbits=4, a_enable=True, w_attr={'weight': (4, True)},
-                                        activation_quantization_fn=symmetric_selection_histogram,
-                                        activation_quantization_method=QuantizationMethod.SYMMETRIC)
-
-        exp_actq_cfg_params_dict1 = {'n_bits': 8,
-                                     'actq_params_fn': symmetric_selection_histogram,
-                                     'actq_method': QuantizationMethod.SYMMETRIC}       
-        
-        exp_actq_cfg_params_dict2 = {'n_bits': FLOAT_BITWIDTH,
-                                     'actq_params_fn': power_of_two_selection_histogram,
-                                     'actq_method': QuantizationMethod.POWER_OF_TWO}
-        
-        exp_actq_cfg_params_dict3 = {'n_bits': 8,
-                                     'actq_params_fn': symmetric_selection_histogram,
-                                     'actq_method': QuantizationMethod.SYMMETRIC}       
-        
-        exp_actq_cfg_params_dict4 = {'n_bits': 4,
-                                     'actq_params_fn': symmetric_selection_histogram,
-                                     'actq_method': QuantizationMethod.SYMMETRIC}             
-        
-        ### Expected candidates when transformed by the qcfg of FusingInfo
-        conv_1_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1)]
-        ### Expected values when unchanged
-        relu_1_qc_cfg = [exp_candidate_base1]
-        ### Expected candidates when transformed by FusingInfo where qcfg is None
-        conv_2_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict2)]
-        ### Expected values when unchanged
-        tanh_qc_cfg   = [exp_candidate_base1]
-        ### Expected candidates with multiple configurations when transformed by the qcfg of FusingInfo
-        conv_3_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict3),
-                         create_exp_candidate_cfg(exp_candidate_base2, **exp_actq_cfg_params_dict4)]
-        ### Expected values when unchanged
-        relu_2_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
-        ### Expected candidates when transformed with preserving set to True
-        flatten_qc_cfg = [create_exp_candidate_cfg(exp_candidate_base1, **exp_actq_cfg_params_dict1)]
-        ### Expected values when unchanged
-        linear_qc_cfg = [exp_candidate_base1, exp_candidate_base2]
-
-        self.exp_filter_nodes_candidates = [conv_1_qc_cfg, relu_1_qc_cfg,
-                                            conv_2_qc_cfg, tanh_qc_cfg,
-                                            conv_3_qc_cfg, relu_2_qc_cfg,
-                                            flatten_qc_cfg, linear_qc_cfg]
-    
-    def check_candidates_activation_qcfg(self, candidates, exp_candidates):
-        """
-        Check if the ActivationQuantization settings set on the graph nodes match the expected values
-        """
-        for test_c, exp_c in zip(candidates, exp_candidates):
-            test_actq_cfg = test_c.activation_quantization_cfg
-            exp_actq_cfg = exp_c.activation_quantization_cfg
-            assert test_actq_cfg.activation_n_bits == exp_actq_cfg.activation_n_bits
-            assert test_actq_cfg.activation_quantization_method == exp_actq_cfg.activation_quantization_method
-            assert test_actq_cfg.signedness == exp_actq_cfg.signedness
-    
-    @pytest.mark.parametrize(("idx"), [
-        0,   ### FLN_QUANT layer : Conv2d
-        1,   ### QUANT layer : ReLU
-        2,   ### FLN_QUANT layer : Conv2d (with not set QC)
-        4,   ### FLN_QUANT layer : Conv2d (with multiple QCs)
-        6,   ### PRESERVE_QUANT layer : Flatten (with preserving flag set to True)
-        7,   ### QUANT layer : Linear (with multiple QCs)
     ])
-    def test_filter_node_candidates_updates_activation_quantization_config(self, idx):
+    def test_filter_node_candidates(self, wqe_flag):
         """
-        Test the filter_node_candidates function for different node types and configurations.
+        Test the filter_node_candidates function for a graph with multiple nodes and configurations.
         """
-        nodes = self.mock_node
-        fw_info = self.fw_info
+        ### Create Test Nodes
+        mock_nodes = []
+        mock_nodes.append(build_mock_node(name='conv', layer_class='Conv2d', wqe_flag=wqe_flag))
+
+        ### Create a mock graph
+        ### Note: Generate the graph first because fusing_info cannot be set without it.
+        ###       In the following Mock, use wraps to mock everything except fusing_info.
+        real_graph = Graph("dummy", [], [], [], [])
+        
+        graph = Mock(spec=Graph, wraps=real_graph)
+        graph.nodes = mock_nodes
+
+        ### call override_fused_node_activation_quantization_candidates
+        graph.override_fused_node_activation_quantization_candidates()
+
+        fw_info = Mock()
         fw_info.get_kernel_op_attributes.return_value = ['weight']
 
-        output_candidates = filter_node_candidates(nodes[idx], fw_info)
-        exp_candidates = self.exp_filter_nodes_candidates[idx]
+        output_candidates = filter_node_candidates(graph.nodes[0], fw_info)
 
-        ### Check if the ActivationQuantization settings match the expected values
-        self.check_candidates_activation_qcfg(output_candidates, exp_candidates)
+        assert output_candidates[0].activation_quantization_cfg.activation_n_bits == FLOAT_BITWIDTH
+        assert output_candidates[0].activation_quantization_cfg.activation_quantization_method == QuantizationMethod.POWER_OF_TWO

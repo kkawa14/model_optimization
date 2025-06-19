@@ -21,7 +21,6 @@ from mct_quantizers import QuantizationMethod
 from model_compression_toolkit.core.common import Graph
 from model_compression_toolkit.core.common.graph.base_node import BaseNode
 from model_compression_toolkit.core.common.fusion.fusing_info import FusingInfo
-from model_compression_toolkit.constants import FUSED_LAYER_PATTERN, FUSED_OP_QUANT_CONFIG
 from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import Signedness
 from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
 from model_compression_toolkit.core.common.quantization.node_quantization_config import ActivationQuantizationMode, NodeActivationQuantizationConfig
