@@ -888,14 +888,13 @@ class Graph(nx.MultiDiGraph, GraphSearches):
             fused_node_op_id = self.fusing_info.get_fused_op_id_for_node(node.name)
             fusiong_op_quaitization_cfg = self.fusing_info.get_fused_op_quantization_config(fused_node_op_id) 
             if fusiong_op_quaitization_cfg is not None:
-                for qc in node.candidates_quantization_cfg:
-                    # Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
-                    actq_cfg = qc.activation_quantization_cfg
-                    actq_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
-                    actq_cfg.activation_n_bits = fusiong_op_quaitization_cfg.activation_n_bits
-                    actq_cfg.signedness = fusiong_op_quaitization_cfg.signedness
-                    actq_cfg.activation_quantization_method = fusiong_op_quaitization_cfg.activation_quantization_method
-                    actq_cfg.activation_quantization_params_fn = get_activation_quantization_params_fn(fusiong_op_quaitization_cfg.activation_quantization_method)
+                # Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
+                actq_cfg = node.candidates_quantization_cfg[0].activation_quantization_cfg
+                actq_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
+                actq_cfg.activation_n_bits = fusiong_op_quaitization_cfg.activation_n_bits
+                actq_cfg.signedness = fusiong_op_quaitization_cfg.signedness
+                actq_cfg.activation_quantization_method = fusiong_op_quaitization_cfg.activation_quantization_method
+                actq_cfg.activation_quantization_params_fn = get_activation_quantization_params_fn(fusiong_op_quaitization_cfg.activation_quantization_method)
                 node.candidates_quantization_cfg = [node.candidates_quantization_cfg[0]]
             else:
                 for qc in node.candidates_quantization_cfg:
