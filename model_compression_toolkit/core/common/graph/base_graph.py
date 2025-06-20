@@ -887,7 +887,7 @@ class Graph(nx.MultiDiGraph, GraphSearches):
         for node in nodes_to_disable:
             fused_node_op_id = self.fusing_info.get_fused_op_id_for_node(node.name)
             fusiong_op_quaitization_cfg = self.fusing_info.get_fused_op_quantization_config(fused_node_op_id) 
-            if fusiong_op_quaitization_cfg is not None:
+            if fusiong_op_quaitization_cfg is not None and fusiong_op_quaitization_cfg.enable_activation_quantization:
                 # Set ActivationQuantizationMode to FLN_QUANT and update the value of quantization_config
                 actq_cfg = node.candidates_quantization_cfg[0].activation_quantization_cfg
                 actq_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
