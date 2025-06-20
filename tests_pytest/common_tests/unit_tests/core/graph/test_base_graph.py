@@ -27,20 +27,21 @@ from model_compression_toolkit.core.common.quantization.node_quantization_config
 from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.power_of_two_selection import power_of_two_selection_histogram
 
-    
-# Setup TEST_QC and TEST_QCO for testing.
-TEST_QC = generate_test_op_qc(**generate_test_attr_configs(),
-                              activation_n_bits=16,
-                              activation_quantization_method=QuantizationMethod.POWER_OF_TWO)
-
 def build_mock_fusing_info(nodes):
     """
     Creates a mock FusingInfo object that simulates the behavior of fusing information in a graph.
     """
 
+    OpQCfg = Mock(spec=NodeActivationQuantizationConfig)
+    OpQCfg.activation_n_bits = 16
+    OpQCfg.signedness = Signedness.AUTO
+    OpQCfg.activation_quantization_method = QuantizationMethod.POWER_OF_TWO
+    OpQCfg.activation_quantization_params_fn = power_of_two_selection_histogram
+
     fusing_info = Mock(spec=FusingInfo)
     fusing_info.get_inner_fln_nodes.return_value = [nodes[0], nodes[1]]
-    fusing_info.get_fused_op_quantization_config.side_effect = [TEST_QC, None]
+    fusing_info.get_fused_op_quantization_config.side_effect = [OpQCfg, None]
+    
     return fusing_info
 
 def build_mock_node(name, layer_class):
