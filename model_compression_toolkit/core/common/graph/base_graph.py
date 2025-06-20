@@ -879,7 +879,7 @@ class Graph(nx.MultiDiGraph, GraphSearches):
 
     def override_fused_node_activation_quantization_candidates(self):
         """
-        Disable activation quantization for all nodes in fused operations,
+        Override fused node activation quantization candidates for all nodes in fused operations,
         except for the last node in each fused group.
         Update the value of quantization_config with the value of op_quaitization_cfg from FusingInfo.
         """
