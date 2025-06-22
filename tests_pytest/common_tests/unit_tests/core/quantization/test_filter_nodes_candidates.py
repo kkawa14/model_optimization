@@ -36,7 +36,6 @@ def build_mock_node(name, layer_class, wqe_flag):
     node.kernel_attr = "wqe_flag"
 
     node.is_no_quantization.return_value = True
-    node.is_fln_no_quantization.return_value = False
     node.is_weights_quantization_enabled.return_value = wqe_flag
 
     activation_quantization_cfg = Mock(spec=NodeActivationQuantizationConfig)
