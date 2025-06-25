@@ -38,12 +38,6 @@ from model_compression_toolkit.logger import Logger
 from model_compression_toolkit.target_platform_capabilities.targetplatform2framework import LayerFilterParams
 from model_compression_toolkit.target_platform_capabilities.targetplatform2framework.framework_quantization_capabilities import \
     FrameworkQuantizationCapabilities
-#from model_compression_toolkit.core.common.quantization.quantization_params_fn_selection import \
-#    get_activation_quantization_params_fn
-###from model_compression_toolkit.core import QuantizationConfig, QuantizationErrorMethod, CoreConfig
-
-#from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
-
 
 def validate_graph_after_change(method: Callable) -> Callable:
     """
