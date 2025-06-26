@@ -94,7 +94,6 @@ class BaseFusingInfoGeneratorTest(abc.ABC):
         """
         assert self._data_gen is not None
         assert self.fw_impl is not None
-        assert self.fw_info is not None
         assert self.attach_to_fw_func is not None
         assert self.expected_fi is not None
         assert self.last_node_activation_nbits is not None
@@ -105,7 +104,6 @@ class BaseFusingInfoGeneratorTest(abc.ABC):
         graph_with_fusion_metadata = graph_preparation_runner(self._get_model(),
                                                               self._data_gen,
                                                               self._get_qc(),
-                                                              fw_info=self.fw_info,
                                                               fw_impl=self.fw_impl,
                                                               fqc=self.fqc,
                                                               mixed_precision_enable=True,
@@ -118,7 +116,7 @@ class BaseFusingInfoGeneratorTest(abc.ABC):
 
     def test_expected_fusing_info(self, graph_with_fusion_metadata):
         actual_fi = graph_with_fusion_metadata.fusing_info
-        assert self.expected_fi.node_to_fused_node_map == actual_fi.node_to_fused_node_map
+        assert self.expected_fi.node_name_to_fused_op_id == actual_fi.node_name_to_fused_op_id
 
     def test_expected_fused_graph(self, fused_graph):
         expected_fused_nodes = self.expected_fi.fusing_data

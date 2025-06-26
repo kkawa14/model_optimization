@@ -18,7 +18,7 @@ from typing import Callable
 import torch.nn
 
 from mct_quantizers import PytorchQuantizationWrapper
-from mct_quantizers.common.constants import LAYER, WEIGHTS_QUANTIZERS
+from mct_quantizers.common.constants import LAYER, WEIGHTS_QUANTIZERS, QUANTIZED_POSITIONAL_WEIGHT
 from model_compression_toolkit.logger import Logger
 from model_compression_toolkit.exporter.model_exporter.fw_agonstic.exporter import Exporter
 
@@ -56,7 +56,7 @@ def find_and_assign_metadata_attr(model: torch.nn.Module, attr_name: str = 'meta
                 f"Only the first one was assigned to 'model.metadata'.")
 
 
-def _set_quantized_weights_in_wrapper(layer:PytorchQuantizationWrapper):
+def _set_quantized_weights_in_wrapper(layer: PytorchQuantizationWrapper):
     """
        Sets the quantized weights in the provided PytorchQuantizationWrapper layer.
        Replaces the original weights in the layer with the quantized weights.
@@ -73,8 +73,27 @@ def _set_quantized_weights_in_wrapper(layer:PytorchQuantizationWrapper):
     for name in layer.weights_quantizers.keys():
         quantized_weight = torch.nn.Parameter(layer.get_quantized_weights()[name]).detach()
         linear_layer = getattr(layer, LAYER)
-        delattr(linear_layer, name)
-        setattr(linear_layer, name, torch.nn.Parameter(quantized_weight))
+
+        # If the name is a string, we assume it's a named attribute of the linear layer
+        if isinstance(name, str):
+            # Remove the existing attribute from the linear layer
+            delattr(linear_layer, name)
+            # Replace it with the quantized version as a new parameter
+            setattr(linear_layer, name, torch.nn.Parameter(quantized_weight))
+        else:
+            # If the name is not a string, it must be an integer representing a positional weight
+            assert isinstance(name, int)
+            attr_name = f'{QUANTIZED_POSITIONAL_WEIGHT}_{name}'
+
+            # Note: This naming scheme is used to mimic the behavior expected in
+            # the PytorchQuantizationWrapper's forward method, which looks for attributes
+            # like 'quantized_pos_weight_0', 'quantized_pos_weight_1', etc.
+
+            if hasattr(layer, attr_name):
+                delattr(layer, attr_name)
+
+            # Add the quantized weight as a new attribute directly on the parent layer
+            setattr(layer, attr_name, quantized_weight)
 
     # Clear the weights quantizers dictionary
     layer.weights_quantizers = {}
@@ -105,7 +124,7 @@ class BasePyTorchExporter(Exporter):
         self.model = copy.deepcopy(self.model)
         self.repr_dataset = repr_dataset
 
-    def _substitute_fully_quantized_model(self):
+    def _substitute_fully_quantized_model(self, replace_wrapped=True):
         """
         Substitution for pytorch "fully-quantized" models. It first uses the weight quantizers
         in PytorchQuantizationWrapper layers to quantize the weights and set them in the layer.
@@ -117,8 +136,9 @@ class BasePyTorchExporter(Exporter):
             if isinstance(layer, PytorchQuantizationWrapper):
                 _set_quantized_weights_in_wrapper(layer)
 
-        # Replace PytorchQuantizationWrapper layers with their internal layers
-        self._replace_wrapped_with_unwrapped()
+        if replace_wrapped:
+            # Replace PytorchQuantizationWrapper layers with their internal layers
+            self._replace_wrapped_with_unwrapped()
 
     def _replace_wrapped_with_unwrapped(self):
         """
@@ -129,3 +149,4 @@ class BasePyTorchExporter(Exporter):
         for name, module in self.model.named_children():
             if isinstance(module, PytorchQuantizationWrapper):
                 setattr(self.model, name, module.layer)
+
