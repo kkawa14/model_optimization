@@ -892,10 +892,7 @@ class Graph(nx.MultiDiGraph, GraphSearches):
         Update the value of quantization_config with the value of op_quaitization_cfg from FusingInfo.
         """
         from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
-<<<<<<< apply_fusinginfo_qcfg_to_actq_cfg
 
-=======
->>>>>>> apply_fusinginfo_qcfg_to_actq_cfg
         nodes_in_fln = self.fusing_info.get_inner_fln_nodes()
         for node in nodes_in_fln:
             fused_node_op_id = self.fusing_info.get_fused_op_id_for_node(node.name)
