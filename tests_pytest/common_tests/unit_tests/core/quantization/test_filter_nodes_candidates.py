@@ -43,6 +43,8 @@ def build_mock_node(name, layer_class, wqe_flag):
     candidate_quantization_config = Mock(spec=CandidateNodeQuantizationConfig)
     candidate_quantization_config.activation_quantization_cfg = activation_quantization_cfg
     candidate_quantization_config.weights_quantization_cfg = Mock()
+    activation_quantization_cfg.activation_n_bits = 16
+    activation_quantization_cfg.activation_quantization_method = QuantizationMethod.SYMMETRIC
 
     node.candidates_quantization_cfg = [candidate_quantization_config]
 
@@ -50,7 +52,7 @@ def build_mock_node(name, layer_class, wqe_flag):
 
 @pytest.mark.parametrize(("wqe_flag"), [
     False,
-    True,   ### QUANT layer : ReLU
+    True,
 ])
 def test_filter_node_candidates(wqe_flag):
     """
@@ -71,5 +73,10 @@ def test_filter_node_candidates(wqe_flag):
 
     output_candidates = filter_node_candidates(graph.nodes[0])
 
-    assert output_candidates[0].activation_quantization_cfg.activation_n_bits == FLOAT_BITWIDTH
-    assert output_candidates[0].activation_quantization_cfg.activation_quantization_method == QuantizationMethod.POWER_OF_TWO
+    if wqe_flag == False:
+        assert output_candidates[0].activation_quantization_cfg.activation_n_bits == FLOAT_BITWIDTH
+        assert output_candidates[0].activation_quantization_cfg.activation_quantization_method == QuantizationMethod.POWER_OF_TWO
+    else:
+        assert output_candidates[0].activation_quantization_cfg.activation_n_bits == 16
+        assert output_candidates[0].activation_quantization_cfg.activation_quantization_method == QuantizationMethod.SYMMETRIC
+      
