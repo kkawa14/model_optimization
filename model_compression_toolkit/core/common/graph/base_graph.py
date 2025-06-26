@@ -900,7 +900,7 @@ class Graph(nx.MultiDiGraph, GraphSearches):
                     qc.activation_quantization_cfg = activation_quantization_cfg
             else:
                 for qc in node.candidates_quantization_cfg:
-                    qc.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_NO_QUANT
+                    qc.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_NO_QUANT           
 
     def validate(self):
         """
