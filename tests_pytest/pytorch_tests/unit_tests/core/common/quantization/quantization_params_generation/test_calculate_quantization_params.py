@@ -155,7 +155,6 @@ class TestCalculateQuantizationParams:
         fw_impl = PytorchImplementation()
         graph = fw_impl.model_reader(float_model,
                                      self.representative_data_gen)
-        graph.set_fw_info(fw_info)
 
         quantization_config = QuantizationConfig(weights_error_method=qem)
 
