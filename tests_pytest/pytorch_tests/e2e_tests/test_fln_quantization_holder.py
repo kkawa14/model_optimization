@@ -16,9 +16,58 @@ import model_compression_toolkit as mct
 import torch
 from mct_quantizers import PytorchActivationQuantizationHolder, PytorchFLNActivationQuantizationHolder
 
-from model_compression_toolkit.core import CoreConfig
-from tests_pytest._fw_tests_common_base.base_fusing_test import build_activation_mp_tpc
+from tests_pytest._test_util.tpc_util import configure_mp_activation_opsets
+from model_compression_toolkit.target_platform_capabilities import QuantizationMethod, AttributeQuantizationConfig, \
+    OpQuantizationConfig, QuantizationConfigOptions, Signedness, OperatorSetNames, TargetPlatformCapabilities, Fusing, OperatorsSet
+from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
 
+
+# Setup TEST_QC and TEST_QCO for testing.
+TEST_QC_1 = generate_test_op_qc(**generate_test_attr_configs(default_cfg_nbits=8, default_cfg_quantizatiom_method=QuantizationMethod.POWER_OF_TWO))
+
+def build_tpc():
+    default_op_cfg = OpQuantizationConfig(
+        default_weight_attr_config=AttributeQuantizationConfig(),
+        attr_weights_configs_mapping={},
+        activation_quantization_method=QuantizationMethod.POWER_OF_TWO,
+        activation_n_bits=8,
+        supported_input_activation_n_bits=[8],
+        enable_activation_quantization=True,
+        enable_weights_quantization=True,
+        quantization_preserving=False,
+        fixed_scale=None,
+        fixed_zero_point=None,
+        simd_size=32,
+        signedness=Signedness.AUTO
+    )
+
+    opsets, _ = configure_mp_activation_opsets(
+        opset_names=[OperatorSetNames.CONV,
+                     OperatorSetNames.RELU,
+                     OperatorSetNames.SIGMOID,
+                     OperatorSetNames.FULLY_CONNECTED,
+                     OperatorSetNames.HARDSWISH],
+        base_op_config=default_op_cfg,
+        a_nbits=[8]
+    )
+    default_cfg = QuantizationConfigOptions(quantization_configurations=[default_op_cfg])
+
+    tpc = TargetPlatformCapabilities(
+        default_qco=default_cfg,
+        operator_set=opsets,
+        fusing_patterns=[
+        Fusing(operator_groups=(
+            OperatorsSet(name=OperatorSetNames.CONV),
+            OperatorsSet(name=OperatorSetNames.RELU)), fuse_op_quantization_config=TEST_QC_1),
+        Fusing(operator_groups=(
+            OperatorsSet(name=OperatorSetNames.CONV),
+            OperatorsSet(name=OperatorSetNames.SIGMOID)), fuse_op_quantization_config=TEST_QC_1),
+        Fusing(operator_groups=(
+            OperatorsSet(name=OperatorSetNames.FULLY_CONNECTED),
+            OperatorsSet(name=OperatorSetNames.HARDSWISH)), fuse_op_quantization_config=TEST_QC_1),
+        ]
+    )
+    return tpc
 
 def representative_data_gen(shape=(3, 8, 8), num_inputs=1, batch_size=2, num_iter=1):
     for _ in range(num_iter):
@@ -50,12 +99,11 @@ def get_float_model():
 def test_fln_quantization_holder():
 
     float_model = get_float_model()
-    tpc = build_activation_mp_tpc()
+    tpc = build_tpc()
 
     quantized_model, _ = mct.ptq.pytorch_post_training_quantization(
         in_module=float_model,
         representative_data_gen=representative_data_gen,
-        core_config=CoreConfig(),
         target_platform_capabilities=tpc
     )
 

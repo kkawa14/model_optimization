@@ -20,13 +20,15 @@ from mct_quantizers import QuantizationMethod, PytorchActivationQuantizationHold
 
 from model_compression_toolkit.core.common import Graph, BaseNode
 from model_compression_toolkit.core.common.graph.edge import Edge
-from tests_pytest._test_util.graph_builder_utils import DummyLayer
 from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
 from model_compression_toolkit.core.common.quantization.node_quantization_config import NodeActivationQuantizationConfig, ActivationQuantizationMode
 from model_compression_toolkit.target_platform_capabilities import AttributeQuantizationConfig, OpQuantizationConfig, Signedness
 from model_compression_toolkit.core import QuantizationConfig
 from model_compression_toolkit.core.pytorch.back2framework.pytorch_model_builder import PyTorchModelBuilder
 from model_compression_toolkit.target_platform_capabilities.targetplatform2framework.framework_quantization_capabilities import FrameworkQuantizationCapabilities
+from model_compression_toolkit.core.pytorch.default_framework_info import PyTorchInfo
+from model_compression_toolkit.core.common.framework_info import set_fw_info
+from tests_pytest._test_util.graph_builder_utils import DummyLayer
 from tests_pytest._test_util.tpc_util import minimal_tpc
 
 
@@ -63,6 +65,8 @@ def build_qc(q_mode=ActivationQuantizationMode.QUANT):
     return qc
 
 def get_test_graph():
+    
+    set_fw_info(PyTorchInfo)
 
     conv1 = build_node('conv1', framework_attr={'in_channels':3, 'out_channels':3, 'kernel_size':3}, 
                        layer_class=torch.nn.Conv2d, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
@@ -115,6 +119,7 @@ def get_inferable_quantizers_mock(node):
         return {}, []
     
     return {}, [activation_quantizers]
+
 
 class TestPyTorchModelBuilder():
 
