@@ -179,7 +179,7 @@ class TestCalculateQuantizationParams:
                                                                        weights_channels_axis=ChannelAxisMapping(0, 1),
                                                                        node_attrs_list=['weight', 'bias'])
             )
-            if n.name in ['conv3', 'relu']:
+            if n.name in ['conv3']:
                 candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
             else:
                 candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.QUANT
@@ -206,18 +206,10 @@ class TestCalculateQuantizationParams:
         for _ in range(num_iter):
             yield [torch.randn(batch_size, *shape)] * num_inputs
 
-    # test case for test_calculate_quantization_params
-    test_input_0 = QuantizationErrorMethod.MSE
-
-    @pytest.mark.parametrize("inputs", [
-        test_input_0
-    ])
-    def test_calculate_quantization_params(self, inputs):
-        quantization_err_method = inputs
-        graph, fw_impl, hessian_info_service = self.get_test_graph(quantization_err_method)
+    def test_calculate_quantization_params(self):
+        graph, fw_impl, hessian_info_service = self.get_test_graph(QuantizationErrorMethod.MSE)
 
         calculate_quantization_params(graph, fw_impl, self.representative_data_gen, hessian_info_service=None)
-
 
         for node in graph.nodes:
             for candidate_qc in node.candidates_quantization_cfg:

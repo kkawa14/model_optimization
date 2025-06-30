@@ -33,8 +33,6 @@ from model_compression_toolkit.target_platform_capabilities.schema.mct_current_s
 
 if TYPE_CHECKING:
     from model_compression_toolkit.core.common import BaseNode
-
-if TYPE_CHECKING:
     from model_compression_toolkit.core.common.graph.base_node import WeightAttrT
 
 ##########################################
