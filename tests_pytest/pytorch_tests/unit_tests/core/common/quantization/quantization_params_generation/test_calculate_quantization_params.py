@@ -199,17 +199,16 @@ class TestCalculateQuantizationParams:
                 graph.node_to_out_stats_collector[n].hc._bins = np.array([0.1, 0.2, 0.3])
             graph.node_to_out_stats_collector[n].hc._counts = np.array([1, 1])
 
-        hessian_info_service = HessianInfoService(graph=graph, fw_impl=fw_impl)
-        return graph, fw_impl, hessian_info_service
+        return graph, fw_impl
 
     def representative_data_gen(self, shape=(3, 8, 8), num_inputs=1, batch_size=2, num_iter=10):
         for _ in range(num_iter):
             yield [torch.randn(batch_size, *shape)] * num_inputs
 
     def test_calculate_quantization_params(self):
-        graph, fw_impl, hessian_info_service = self.get_test_graph(QuantizationErrorMethod.MSE)
+        graph, fw_impl = self.get_test_graph(QuantizationErrorMethod.MSE)
 
-        calculate_quantization_params(graph, fw_impl, self.representative_data_gen, hessian_info_service=None)
+        calculate_quantization_params(graph, fw_impl, self.representative_data_gen)
 
         for node in graph.nodes:
             for candidate_qc in node.candidates_quantization_cfg:
