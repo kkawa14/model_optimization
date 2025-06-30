@@ -155,6 +155,7 @@ class TestCalculateQuantizationParams:
         fw_impl = PytorchImplementation()
         graph = fw_impl.model_reader(float_model,
                                      self.representative_data_gen)
+        graph.set_fw_info(fw_info)
 
         quantization_config = QuantizationConfig(weights_error_method=qem)
 
@@ -217,6 +218,7 @@ class TestCalculateQuantizationParams:
         graph, fw_impl, hessian_info_service = self.get_test_graph(quantization_err_method)
 
         calculate_quantization_params(graph, fw_impl, self.representative_data_gen, hessian_info_service=None)
+
 
         for node in graph.nodes:
             for candidate_qc in node.candidates_quantization_cfg:
