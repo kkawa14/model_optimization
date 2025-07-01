@@ -170,15 +170,16 @@ class TestCalculateQuantizationParams:
         graph.node_to_out_stats_collector = dict()
         for id, n in enumerate(graph.nodes):
             n.prior_info = fw_impl.get_node_prior_info(node=n, graph=graph)
-            n.candidates_quantization_cfg = []
+            #n.candidates_quantization_cfg = []
+            activation_quantization_cfg = NodeActivationQuantizationConfig(op_cfg=op_cfg)
+            activation_quantization_cfg.set_qc(quantization_config)
+            weights_quantization_cfg = NodeWeightsQuantizationConfig(op_cfg=op_cfg,
+                                                                     weights_channels_axis=ChannelAxisMapping(0, 1),
+                                                                     node_attrs_list=['weight', 'bias'])
+            weights_quantization_cfg.set_qc(quantization_config)
             candidate_qc_a = CandidateNodeQuantizationConfig(
-                activation_quantization_cfg=NodeActivationQuantizationConfig(qc=quantization_config, op_cfg=op_cfg,
-                                                                             activation_quantization_fn=None,
-                                                                             activation_quantization_params_fn=None),
-                weights_quantization_cfg=NodeWeightsQuantizationConfig(qc=quantization_config, op_cfg=op_cfg,
-                                                                       weights_channels_axis=ChannelAxisMapping(0, 1),
-                                                                       node_attrs_list=['weight', 'bias'])
-            )
+                activation_quantization_cfg=activation_quantization_cfg,
+                weights_quantization_cfg=weights_quantization_cfg)
             if n.name in ['conv3']:
                 candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
             else:
