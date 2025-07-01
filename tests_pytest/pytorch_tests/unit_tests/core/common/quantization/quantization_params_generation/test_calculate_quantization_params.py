@@ -17,10 +17,10 @@ import numpy as np
 import torch
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.qparams_computation import \
     calculate_quantization_params
-from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
-from model_compression_toolkit.core.common.quantization.node_quantization_config import ActivationQuantizationMode
+from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import \
+    CandidateNodeQuantizationConfig, NodeQuantizationConfig
 from model_compression_toolkit.core.common.quantization.node_quantization_config import \
-    NodeActivationQuantizationConfig, NodeWeightsQuantizationConfig
+    ActivationQuantizationMode, NodeActivationQuantizationConfig, NodeWeightsQuantizationConfig
 from model_compression_toolkit.target_platform_capabilities import OpQuantizationConfig
 from model_compression_toolkit.core import QuantizationConfig, QuantizationErrorMethod
 from model_compression_toolkit.core.common.hessian.hessian_info_service import HessianInfoService
@@ -128,7 +128,7 @@ class TestCalculateQuantizationParams:
         # define a quantization config to quantize the kernel (for layers where there is a kernel attribute).
         kernel_base_config = AttributeQuantizationConfig(
             weights_quantization_method=QuantizationMethod.SYMMETRIC,
-            enable_weights_quantization=True,
+            enable_weights_quantization=False,
             weights_n_bits=8)
 
         # define a quantization config to quantize the bias (for layers where there is a bias attribute).
@@ -170,13 +170,12 @@ class TestCalculateQuantizationParams:
         graph.node_to_out_stats_collector = dict()
         for id, n in enumerate(graph.nodes):
             n.prior_info = fw_impl.get_node_prior_info(node=n, graph=graph)
-            #n.candidates_quantization_cfg = []
+
             activation_quantization_cfg = NodeActivationQuantizationConfig(op_cfg=op_cfg)
             activation_quantization_cfg.set_qc(quantization_config)
             weights_quantization_cfg = NodeWeightsQuantizationConfig(op_cfg=op_cfg,
                                                                      weights_channels_axis=ChannelAxisMapping(0, 1),
                                                                      node_attrs_list=['weight', 'bias'])
-            weights_quantization_cfg.set_qc(quantization_config)
             candidate_qc_a = CandidateNodeQuantizationConfig(
                 activation_quantization_cfg=activation_quantization_cfg,
                 weights_quantization_cfg=weights_quantization_cfg)
@@ -184,7 +183,7 @@ class TestCalculateQuantizationParams:
                 candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.FLN_QUANT
             else:
                 candidate_qc_a.activation_quantization_cfg.quant_mode = ActivationQuantizationMode.QUANT
-            n.candidates_quantization_cfg.append(candidate_qc_a)
+            n.quantization_cfg = NodeQuantizationConfig(base_quantization_cfg=candidate_qc_a, candidates_quantization_cfg=[candidate_qc_a, candidate_qc_a])
 
             graph.node_to_out_stats_collector[n] = StatsCollector(init_min_value=0.0, init_max_value=1.0, out_channel_axis=get_fw_info().out_channel_axis_mapping.get(n.type))
             graph.node_to_out_stats_collector[n].hc._n_bins = 3

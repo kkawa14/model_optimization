@@ -134,4 +134,4 @@ def calculate_quantization_params(graph: Graph,
                     activation_quant_cfg=candidate_qc.activation_quantization_cfg, node_prior_info=n.prior_info,
                     out_stats_container=graph.get_out_stats_collector(n))
                 # Create a NodeQuantizationConfig containing all quantization params and attach it to the node
-                candidate_qc.activation_quantization_cfg.set_activation_quantization_param(activation_params)
+                candidate_qc.activation_quantization_cfg.set_activation_quantization_param(activation_params, n)
