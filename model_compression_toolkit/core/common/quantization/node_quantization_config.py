@@ -25,7 +25,6 @@ from model_compression_toolkit.target_platform_capabilities.constants import POS
 from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import \
     AttributeQuantizationConfig, OpQuantizationConfig
 
-
 if TYPE_CHECKING:
     from model_compression_toolkit.core.common import BaseNode
     from model_compression_toolkit.core.common.graph.base_node import WeightAttrT
