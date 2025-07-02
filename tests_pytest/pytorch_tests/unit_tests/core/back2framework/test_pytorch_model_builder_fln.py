@@ -20,10 +20,11 @@ from mct_quantizers import QuantizationMethod, PytorchActivationQuantizationHold
 
 from model_compression_toolkit.core.common import Graph, BaseNode
 from model_compression_toolkit.core.common.graph.edge import Edge
-from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig
-from model_compression_toolkit.core.common.quantization.node_quantization_config import NodeActivationQuantizationConfig, ActivationQuantizationMode
+from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import CandidateNodeQuantizationConfig, NodeQuantizationConfig
+from model_compression_toolkit.core.common.quantization.node_quantization_config import NodeActivationQuantizationConfig, NodeWeightsQuantizationConfig, ActivationQuantizationMode
 from model_compression_toolkit.target_platform_capabilities import AttributeQuantizationConfig, OpQuantizationConfig, Signedness
 from model_compression_toolkit.core import QuantizationConfig
+from model_compression_toolkit.core.common.framework_info import ChannelAxisMapping
 from model_compression_toolkit.core.pytorch.back2framework.pytorch_model_builder import PyTorchModelBuilder
 from model_compression_toolkit.target_platform_capabilities.targetplatform2framework.framework_quantization_capabilities import FrameworkQuantizationCapabilities
 from model_compression_toolkit.core.pytorch.default_framework_info import PyTorchInfo
@@ -43,7 +44,7 @@ def build_node(name='node', framework_attr={}, layer_class=DummyLayer,
                     reuse=False)
     if qcs:
         assert isinstance(qcs, list)
-        node.candidates_quantization_cfg = qcs
+        node.quantization_cfg = NodeQuantizationConfig(base_quantization_cfg=qcs[0], candidates_quantization_cfg=qcs)
     return node
 
 def build_qc(q_mode=ActivationQuantizationMode.QUANT):
@@ -57,11 +58,14 @@ def build_qc(q_mode=ActivationQuantizationMode.QUANT):
         supported_input_activation_n_bits=8,
         signedness=Signedness.AUTO
     )
-    a_qcfg = NodeActivationQuantizationConfig(qc=QuantizationConfig(), op_cfg=op_cfg,
-                                              activation_quantization_fn=None,
-                                              activation_quantization_params_fn=None)
+    a_qcfg = NodeActivationQuantizationConfig(op_cfg=op_cfg)
+    a_qcfg.set_qc(QuantizationConfig())
     a_qcfg.quant_mode = q_mode
-    qc = CandidateNodeQuantizationConfig(activation_quantization_cfg=a_qcfg)
+    w_qcfg = NodeWeightsQuantizationConfig(op_cfg=op_cfg,
+                                           weights_channels_axis=ChannelAxisMapping(0, 1),
+                                           node_attrs_list=['weight', 'bias'])
+    qc = CandidateNodeQuantizationConfig(activation_quantization_cfg=a_qcfg, 
+                                         weights_quantization_cfg=w_qcfg)
     return qc
 
 def get_test_graph():
@@ -72,7 +76,7 @@ def get_test_graph():
                        layer_class=torch.nn.Conv2d, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
     relu = build_node('relu', layer_class=torch.nn.ReLU, qcs=[build_qc()])
     conv2 = build_node('conv2', framework_attr={'in_channels':3, 'out_channels':3, 'kernel_size':3}, 
-                       layer_class=torch.nn.Conv2d, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_QUANT)])
+                       layer_class=torch.nn.Conv2d, qcs=[build_qc(q_mode=ActivationQuantizationMode.FLN_NO_QUANT)])
     sigmoid = build_node('sigmoid', layer_class=torch.nn.Sigmoid, qcs=[build_qc()])
     flatten = build_node('flatten', layer_class=torch.nn.Flatten, 
                          qcs=[build_qc(q_mode=ActivationQuantizationMode.PRESERVE_QUANT)])
@@ -98,13 +102,13 @@ def get_test_graph():
 
 def get_inferable_quantizers_mock(node):
 
-    if node.name == 'conv1' or node.name == 'fc':
+    if node.name == 'conv2' or node.name == 'fc':
         activation_quantizers = Mock()
         activation_quantizers.num_bits = 8
         activation_quantizers.signed = False
         activation_quantizers.threshold_np = 8.0
     
-    elif node.name == 'conv2':
+    elif node.name == 'conv1':
         activation_quantizers = Mock()
         activation_quantizers.num_bits = 16
         activation_quantizers.signed = True
@@ -135,29 +139,27 @@ class TestPyTorchModelBuilder():
                                                                                   fw_impl=fw_impl_mock, **kwargs)).build_model()
         
         # check conv1
+        assert hasattr(exportable_model, 'conv1_activation_holder_quantizer')
         conv1_activation_holder_quantizer = exportable_model.conv1_activation_holder_quantizer
         assert isinstance(conv1_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
         assert conv1_activation_holder_quantizer.quantization_bypass == True
-        assert conv1_activation_holder_quantizer.activation_holder_quantizer.num_bits == 8
-        assert conv1_activation_holder_quantizer.activation_holder_quantizer.signed == False
-        assert conv1_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 8.0
+        assert conv1_activation_holder_quantizer.activation_holder_quantizer.num_bits == 16
+        assert conv1_activation_holder_quantizer.activation_holder_quantizer.signed == True
+        assert conv1_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 16.0
 
         # check relu
+        assert hasattr(exportable_model, 'relu_activation_holder_quantizer')
         relu_activation_holder_quantizer = exportable_model.relu_activation_holder_quantizer
         assert isinstance(relu_activation_holder_quantizer, PytorchActivationQuantizationHolder)
         assert relu_activation_holder_quantizer.activation_holder_quantizer.num_bits == 4
         assert relu_activation_holder_quantizer.activation_holder_quantizer.signed == False
         assert relu_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 4.0
 
-        # check conv2
-        conv2_activation_holder_quantizer = exportable_model.conv2_activation_holder_quantizer
-        assert isinstance(conv2_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
-        assert conv2_activation_holder_quantizer.quantization_bypass == True
-        assert conv2_activation_holder_quantizer.activation_holder_quantizer.num_bits == 16
-        assert conv2_activation_holder_quantizer.activation_holder_quantizer.signed == True
-        assert conv2_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 16.0
-
+        # check conv2 (FLN_NO_QUANT)
+        assert not hasattr(exportable_model, 'conv2_activation_holder_quantizer')
+ 
         # check sigmoid
+        assert hasattr(exportable_model, 'sigmoid_activation_holder_quantizer')
         sigmoid_activation_holder_quantizer = exportable_model.sigmoid_activation_holder_quantizer
         assert isinstance(sigmoid_activation_holder_quantizer, PytorchActivationQuantizationHolder)
         assert sigmoid_activation_holder_quantizer.activation_holder_quantizer.num_bits == 4
@@ -165,6 +167,7 @@ class TestPyTorchModelBuilder():
         assert sigmoid_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 4.0
 
         # check fc
+        assert hasattr(exportable_model, 'fc_activation_holder_quantizer')
         fc_activation_holder_quantizer = exportable_model.fc_activation_holder_quantizer
         assert isinstance(fc_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
         assert fc_activation_holder_quantizer.quantization_bypass == True
@@ -173,6 +176,7 @@ class TestPyTorchModelBuilder():
         assert fc_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 8.0
 
         # check hswish
+        assert hasattr(exportable_model, 'hswish_activation_holder_quantizer')
         hswish_activation_holder_quantizer = exportable_model.hswish_activation_holder_quantizer
         assert isinstance(hswish_activation_holder_quantizer, PytorchActivationQuantizationHolder)
         assert hswish_activation_holder_quantizer.activation_holder_quantizer.num_bits == 4

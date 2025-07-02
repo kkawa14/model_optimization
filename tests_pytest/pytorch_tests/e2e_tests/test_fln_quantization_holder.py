@@ -17,13 +17,10 @@ import torch
 from mct_quantizers import PytorchActivationQuantizationHolder, PytorchFLNActivationQuantizationHolder
 
 from tests_pytest._test_util.tpc_util import configure_mp_activation_opsets
-from model_compression_toolkit.target_platform_capabilities import QuantizationMethod, AttributeQuantizationConfig, \
+from model_compression_toolkit.target_platform_capabilities.schema.v2 import QuantizationMethod, AttributeQuantizationConfig, \
     OpQuantizationConfig, QuantizationConfigOptions, Signedness, OperatorSetNames, TargetPlatformCapabilities, Fusing, OperatorsSet
 from tests.common_tests.helpers.generate_test_tpc import generate_test_attr_configs, generate_test_op_qc
 
-
-# Setup TEST_QC and TEST_QCO for testing.
-TEST_QC_1 = generate_test_op_qc(**generate_test_attr_configs(default_cfg_nbits=8, default_cfg_quantizatiom_method=QuantizationMethod.POWER_OF_TWO))
 
 def build_tpc():
     default_op_cfg = OpQuantizationConfig(
@@ -52,19 +49,21 @@ def build_tpc():
     )
     default_cfg = QuantizationConfigOptions(quantization_configurations=[default_op_cfg])
 
+    test_qc = generate_test_op_qc(**generate_test_attr_configs(default_cfg_nbits=8, default_cfg_quantizatiom_method=QuantizationMethod.POWER_OF_TWO))
+
     tpc = TargetPlatformCapabilities(
         default_qco=default_cfg,
         operator_set=opsets,
         fusing_patterns=[
         Fusing(operator_groups=(
             OperatorsSet(name=OperatorSetNames.CONV),
-            OperatorsSet(name=OperatorSetNames.RELU)), fuse_op_quantization_config=TEST_QC_1),
+            OperatorsSet(name=OperatorSetNames.RELU)), fuse_op_quantization_config=test_qc),
         Fusing(operator_groups=(
             OperatorsSet(name=OperatorSetNames.CONV),
-            OperatorsSet(name=OperatorSetNames.SIGMOID)), fuse_op_quantization_config=TEST_QC_1),
+            OperatorsSet(name=OperatorSetNames.SIGMOID))),
         Fusing(operator_groups=(
             OperatorsSet(name=OperatorSetNames.FULLY_CONNECTED),
-            OperatorsSet(name=OperatorSetNames.HARDSWISH)), fuse_op_quantization_config=TEST_QC_1),
+            OperatorsSet(name=OperatorSetNames.HARDSWISH)), fuse_op_quantization_config=test_qc),
         ]
     )
     return tpc
@@ -108,28 +107,31 @@ def test_fln_quantization_holder():
     )
 
     # check conv1
+    assert hasattr(quantized_model, 'conv1_activation_holder_quantizer')
     conv1_activation_holder_quantizer = quantized_model.conv1_activation_holder_quantizer
     assert isinstance(conv1_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
     assert conv1_activation_holder_quantizer.quantization_bypass == True
 
     # check relu
+    assert hasattr(quantized_model, 'relu_activation_holder_quantizer')
     relu_activation_holder_quantizer = quantized_model.relu_activation_holder_quantizer
     assert isinstance(relu_activation_holder_quantizer, PytorchActivationQuantizationHolder)
 
     # check conv2
-    conv2_activation_holder_quantizer = quantized_model.conv2_activation_holder_quantizer
-    assert isinstance(conv2_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
-    assert conv2_activation_holder_quantizer.quantization_bypass == True
-
+    assert not hasattr(quantized_model, 'conv2_activation_holder_quantizer')
+    
     # check sigmoid
+    assert hasattr(quantized_model, 'sigmoid_activation_holder_quantizer')
     sigmoid_activation_holder_quantizer = quantized_model.sigmoid_activation_holder_quantizer
     assert isinstance(sigmoid_activation_holder_quantizer, PytorchActivationQuantizationHolder)
 
     # check fc
+    assert hasattr(quantized_model, 'fc_activation_holder_quantizer')
     fc_activation_holder_quantizer = quantized_model.fc_activation_holder_quantizer
     assert isinstance(fc_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
     assert fc_activation_holder_quantizer.quantization_bypass == True
 
     # check hswish
+    assert hasattr(quantized_model, 'hswish_activation_holder_quantizer')
     hswish_activation_holder_quantizer = quantized_model.hswish_activation_holder_quantizer
     assert isinstance(hswish_activation_holder_quantizer, PytorchActivationQuantizationHolder)

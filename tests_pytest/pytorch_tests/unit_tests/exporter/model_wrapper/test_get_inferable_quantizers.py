@@ -55,7 +55,7 @@ def test_get_inferable_quantizers():
     assert activation_quantizers[0].signed == False
     assert activation_quantizers[0].threshold_np == 4.0
 
-    # NO_QUANT node
+    # NO_QUANT and FLN_NO_QUANT node
     node_mock = Mock()
     node_mock.is_activation_quantization_enabled.return_value = False
     node_mock.is_fln_quantization.return_value = False
