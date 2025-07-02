@@ -143,17 +143,15 @@ class NodeActivationQuantizationConfig(BaseNodeQuantizationConfig):
         return self.quant_mode == ActivationQuantizationMode.FLN_QUANT
 
     def set_activation_quantization_param(self,
-                                          activation_params: dict,
-                                          node: BaseNode):
+                                          activation_params: dict):
         """
          Set a quantization parameter for the node's activation.
 
         Args:
             activation_params: Dictionary that contains weight quantization params.
-            node: node in a graph that represents the model.
 
         """
-        assert node.is_activation_quantization_enabled() or node.is_fln_quantization()
+        assert self.quant_mode == ActivationQuantizationMode.QUANT or self.quant_mode == ActivationQuantizationMode.FLN_QUANT
         for param_name, param_value in activation_params.items():
             self.activation_quantization_params[param_name] = param_value
 
