@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable
+from typing import Callable, Optional, List
 from io import BytesIO
 
 import torch.nn
 
 from mct_quantizers import PytorchActivationQuantizationHolder, PytorchQuantizationWrapper
 
-from model_compression_toolkit.core.pytorch.reader.node_holders import DummyPlaceHolder
 from model_compression_toolkit.verify_packages import FOUND_ONNX
 from model_compression_toolkit.logger import Logger
 from model_compression_toolkit.core.pytorch.utils import to_torch_tensor
@@ -65,10 +64,13 @@ if FOUND_ONNX:
             self._use_onnx_custom_quantizer_ops = use_onnx_custom_quantizer_ops
             self._onnx_opset_version = onnx_opset_version
 
-        def export(self, output_names=None) -> None:
+        def export(self, output_names: Optional[List[str]] = None) -> None:
             """
             Convert an exportable (fully-quantized) PyTorch model to a fakely-quant model
             (namely, weights that are in fake-quant format) and fake-quant layers for the activations.
+
+            Args:
+                output_names (Optional[List[str]]): Optional list of output node names for export compatibility.
 
             Returns:
                 Fake-quant PyTorch model.
@@ -131,6 +133,8 @@ if FOUND_ONNX:
                     output_names = ['output']
                     dynamic_axes.update({'output': {0: 'batch_size'}})
             else:
+                assert isinstance(output_names, list), \
+                    f"`output_names` must be a list, but got {type(output_names).__name__}"
                 if isinstance(model_output, (list, tuple)):
                     num_of_outputs = len(model_output)
                 else:
