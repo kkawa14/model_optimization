@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from __future__ import annotations
-
 from typing import Any, List, Dict, TYPE_CHECKING
 from enum import Enum, auto
 
@@ -26,7 +24,6 @@ from model_compression_toolkit.target_platform_capabilities.schema.mct_current_s
     AttributeQuantizationConfig, OpQuantizationConfig
 
 if TYPE_CHECKING:
-    from model_compression_toolkit.core.common import BaseNode
     from model_compression_toolkit.core.common.graph.base_node import WeightAttrT
 
 ##########################################
