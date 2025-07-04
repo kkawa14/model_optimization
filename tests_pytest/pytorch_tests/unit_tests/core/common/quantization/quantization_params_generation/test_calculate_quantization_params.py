@@ -35,26 +35,13 @@ from model_compression_toolkit.core.common.framework_info import set_fw_info, ge
 from model_compression_toolkit.core.pytorch.pytorch_implementation import PytorchImplementation
 from model_compression_toolkit.core.common.collectors.statistics_collector import StatsCollector
 from mct_quantizers import QuantizationMethod
-from model_compression_toolkit.core import QuantizationErrorMethod
 
 
 class TestCalculateQuantizationParams:
     def build_node(self, name='node', framework_attr={}, layer_class=torch.nn.Conv2d,
                    q_mode=ActivationQuantizationMode.QUANT):
 
-        node = BaseNode(name=name,
-                        framework_attr=framework_attr,
-                        input_shape=(4, 5, 6),
-                        output_shape=(4, 5, 6),
-                        weights={},
-                        layer_class=layer_class,
-                        reuse=False)
-        #if qcs:
-        #    assert isinstance(qcs, list)
-        #    node.quantization_cfg = NodeQuantizationConfig(base_quantization_cfg=qcs[0],
-        #                                                   candidates_quantization_cfg=qcs)
-        #"""
-        node = Mock(spec=BaseNode)
+        node = Mock()
         node.name = name
         node.layer_class = layer_class
         node.prior_info = Mock(min_output=None, max_output=None)
@@ -62,18 +49,16 @@ class TestCalculateQuantizationParams:
         node.get_weights_by_keys.return_value = None
         node.get_node_weights_attributes.return_value = []
 
-        activation_quantization_cfg = Mock(spec=NodeActivationQuantizationConfig)
-        activation_quantization_cfg.quant_mode = q_mode
-        candidate_quantization_config = Mock(spec=CandidateNodeQuantizationConfig)
-        candidate_quantization_config.activation_quantization_cfg = activation_quantization_cfg
-        candidate_quantization_config.weights_quantization_cfg = Mock()
-        activation_quantization_cfg.activation_n_bits = 16
-        activation_quantization_cfg.activation_quantization_method = QuantizationMethod.SYMMETRIC
-        activation_quantization_cfg.activation_error_method = QuantizationErrorMethod.MSE
-        activation_quantization_cfg.z_threshold = 0
-        activation_quantization_cfg.signedness  = Signedness.SIGNED
-        activation_quantization_cfg.l_p_value = 0
-        activation_quantization_cfg.min_threshold = 0
+        if q_mode == ActivationQuantizationMode.QUANT:
+            node.is_activation_quantization_enabled.return_value = True
+        else:
+            node.is_activation_quantization_enabled.return_value = False
+
+        if q_mode == ActivationQuantizationMode.FLN_QUANT:
+            node.is_fln_quantization.return_value = True
+        else:
+            node.is_fln_quantization.return_value = False
+
 
         op_cfg = OpQuantizationConfig(
             default_weight_attr_config=AttributeQuantizationConfig(),
@@ -89,32 +74,13 @@ class TestCalculateQuantizationParams:
         activation_quantization_cfg.set_qc(QuantizationConfig())
         activation_quantization_cfg.quant_mode = q_mode
 
+        candidate_quantization_config = Mock(spec=CandidateNodeQuantizationConfig)
+        candidate_quantization_config.activation_quantization_cfg = activation_quantization_cfg
+        candidate_quantization_config.weights_quantization_cfg = Mock()
+
         node.candidates_quantization_cfg = [candidate_quantization_config]
-        #"""
+
         return node
-
-    def build_qc(self, q_mode=ActivationQuantizationMode.QUANT):
-        op_cfg = OpQuantizationConfig(
-            default_weight_attr_config=AttributeQuantizationConfig(),
-            attr_weights_configs_mapping={},
-            activation_quantization_method=QuantizationMethod.POWER_OF_TWO,
-            activation_n_bits=8,
-            enable_activation_quantization=True,
-            quantization_preserving=False,
-            supported_input_activation_n_bits=8,
-            signedness=Signedness.AUTO
-        )
-        a_qcfg = NodeActivationQuantizationConfig(op_cfg=op_cfg)
-        a_qcfg.set_qc(QuantizationConfig())
-        a_qcfg.quant_mode = q_mode
-
-        w_qcfg = Mock()
-        w_qcfg._validate_consistent_weights_quant_mode.return_value = True
-        w_qcfg.get_all_weight_attrs_configs.return_value = {}
-
-        qc = CandidateNodeQuantizationConfig(activation_quantization_cfg=a_qcfg,
-                                             weights_quantization_cfg=w_qcfg)
-        return qc
 
     def get_test_graph(self, node_name, q_mode, data):
         set_fw_info(PyTorchInfo)
