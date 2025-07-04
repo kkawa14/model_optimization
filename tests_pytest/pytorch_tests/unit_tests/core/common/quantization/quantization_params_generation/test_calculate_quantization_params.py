@@ -35,6 +35,7 @@ from model_compression_toolkit.core.common.framework_info import set_fw_info, ge
 from model_compression_toolkit.core.pytorch.pytorch_implementation import PytorchImplementation
 from model_compression_toolkit.core.common.collectors.statistics_collector import StatsCollector
 from mct_quantizers import QuantizationMethod
+from model_compression_toolkit.core import QuantizationErrorMethod
 
 
 class TestCalculateQuantizationParams:
@@ -64,10 +65,10 @@ class TestCalculateQuantizationParams:
             default_weight_attr_config=AttributeQuantizationConfig(),
             attr_weights_configs_mapping={},
             activation_quantization_method=QuantizationMethod.POWER_OF_TWO,
-            activation_n_bits=8,
+            activation_n_bits=16,
             enable_activation_quantization=True,
             quantization_preserving=False,
-            supported_input_activation_n_bits=8,
+            supported_input_activation_n_bits=16,
             signedness=Signedness.AUTO
         )
         activation_quantization_cfg = NodeActivationQuantizationConfig(op_cfg=op_cfg)
@@ -85,14 +86,9 @@ class TestCalculateQuantizationParams:
     def get_test_graph(self, node_name, q_mode, data):
         set_fw_info(PyTorchInfo)
 
-        node = self.build_node(node_name, framework_attr={'in_channels': 3, 'out_channels': 3, 'kernel_size': 3},
-                               q_mode=q_mode)
+        node = self.build_node(node_name, q_mode=q_mode)
 
-        graph = Graph('graph_name', input_nodes=[node],
-                      nodes=[node],
-                      output_nodes=[node],
-                      edge_list=[]
-                      )
+        graph = Graph('graph_name', input_nodes=[node], nodes=[node], output_nodes=[node], edge_list=[])
         fw_impl = PytorchImplementation()
 
         graph.node_to_out_stats_collector = dict()
