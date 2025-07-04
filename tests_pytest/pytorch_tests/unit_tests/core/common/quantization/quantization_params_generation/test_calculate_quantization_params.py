@@ -101,23 +101,16 @@ class TestCalculateQuantizationParams:
         return graph, fw_impl
 
     ### test pattern for ActivationQuantizationMode
-    #               node_name,              q_mode,                                     input data,      expected value
-    test_input_0 = ['node_quant',           ActivationQuantizationMode.QUANT,           [0.4, 0.8, 1.2], [1.0, False]]
-    test_input_1 = ['node_fln_quant',       ActivationQuantizationMode.FLN_QUANT,       [0.7, 1.4, 2.1], [2.0, False]]
-    test_input_2 = ['node_fln_no_quant',    ActivationQuantizationMode.FLN_NO_QUANT,    [0.7, 1.4, 2.1], [None, None]]
-    test_input_3 = ['node_no_quant',        ActivationQuantizationMode.NO_QUANT,        [0.7, 1.4, 2.1], [None, None]]
-    test_input_4 = ['node_preserve_quant',  ActivationQuantizationMode.PRESERVE_QUANT,  [0.7, 1.4, 2.1], [None, None]]
-    @pytest.mark.parametrize("inputs", [
-        test_input_0,
-        test_input_1,
-        test_input_2,
-        test_input_3,
-        test_input_4
+    @pytest.mark.parametrize(["node_name", "q_mode", "input_data", "expects"], [
+        # node_name,             q_mode,                                     input data,      expected value
+        ['node_quant',           ActivationQuantizationMode.QUANT,           [0.4, 0.8, 1.2], [1.0, False]],
+        ['node_fln_quant',       ActivationQuantizationMode.FLN_QUANT,       [0.7, 1.4, 2.1], [2.0, False]],
+        ['node_fln_no_quant',    ActivationQuantizationMode.FLN_NO_QUANT,    [0.7, 1.4, 2.1], [None, None]],
+        ['node_no_quant',        ActivationQuantizationMode.NO_QUANT,        [0.7, 1.4, 2.1], [None, None]],
+        ['node_preserve_quant',  ActivationQuantizationMode.PRESERVE_QUANT,  [0.7, 1.4, 2.1], [None, None]],
     ])
-    def test_calculate_quantization_params(self, inputs):
-        expects = inputs[3]
-
-        graph, fw_impl = self.get_test_graph(inputs[0], inputs[1], inputs[2])
+    def test_calculate_quantization_params(self, node_name, q_mode, input_data, expects):
+        graph, fw_impl = self.get_test_graph(node_name, q_mode, input_data)
 
         calculate_quantization_params(graph, fw_impl, None)
 
