@@ -36,7 +36,7 @@ def test_get_activation_quantizer_holder(fw_impl_mock):
 def test_get_fln_activation_quantizer_holder(fw_impl_mock):
 
     activation_quantizers = Mock()
-    activation_quantizers.num_bits = 2
+    activation_quantizers.num_bits = 16
     activation_quantizers.signed = True
     activation_quantizers.threshold_np = 16.0
     fw_impl_mock.get_inferable_quantizers.return_value = (None, [activation_quantizers])
@@ -45,6 +45,6 @@ def test_get_fln_activation_quantizer_holder(fw_impl_mock):
 
     assert isinstance(activation_quantization_holder, PytorchFLNActivationQuantizationHolder)
     assert activation_quantization_holder.quantization_bypass == True
-    assert activation_quantization_holder.activation_holder_quantizer.num_bits == 2
+    assert activation_quantization_holder.activation_holder_quantizer.num_bits == 16
     assert activation_quantization_holder.activation_holder_quantizer.signed == True
     assert activation_quantization_holder.activation_holder_quantizer.threshold_np == 16.0

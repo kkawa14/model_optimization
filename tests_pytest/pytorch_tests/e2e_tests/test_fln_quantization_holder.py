@@ -49,7 +49,7 @@ def build_tpc():
     )
     default_cfg = QuantizationConfigOptions(quantization_configurations=[default_op_cfg])
 
-    test_qc = generate_test_op_qc(**generate_test_attr_configs(default_cfg_nbits=8, default_cfg_quantizatiom_method=QuantizationMethod.POWER_OF_TWO))
+    test_qc = generate_test_op_qc(**generate_test_attr_configs(), activation_n_bits=16)
 
     tpc = TargetPlatformCapabilities(
         default_qco=default_cfg,
@@ -111,11 +111,13 @@ def test_fln_quantization_holder():
     conv1_activation_holder_quantizer = quantized_model.conv1_activation_holder_quantizer
     assert isinstance(conv1_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
     assert conv1_activation_holder_quantizer.quantization_bypass == True
+    assert conv1_activation_holder_quantizer.activation_holder_quantizer.num_bits == 16
 
     # check relu
     assert hasattr(quantized_model, 'relu_activation_holder_quantizer')
     relu_activation_holder_quantizer = quantized_model.relu_activation_holder_quantizer
     assert isinstance(relu_activation_holder_quantizer, PytorchActivationQuantizationHolder)
+    assert relu_activation_holder_quantizer.activation_holder_quantizer.num_bits == 8
 
     # check conv2
     assert not hasattr(quantized_model, 'conv2_activation_holder_quantizer')
@@ -124,14 +126,17 @@ def test_fln_quantization_holder():
     assert hasattr(quantized_model, 'sigmoid_activation_holder_quantizer')
     sigmoid_activation_holder_quantizer = quantized_model.sigmoid_activation_holder_quantizer
     assert isinstance(sigmoid_activation_holder_quantizer, PytorchActivationQuantizationHolder)
+    assert sigmoid_activation_holder_quantizer.activation_holder_quantizer.num_bits == 8
 
     # check fc
     assert hasattr(quantized_model, 'fc_activation_holder_quantizer')
     fc_activation_holder_quantizer = quantized_model.fc_activation_holder_quantizer
     assert isinstance(fc_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
     assert fc_activation_holder_quantizer.quantization_bypass == True
+    assert fc_activation_holder_quantizer.activation_holder_quantizer.num_bits == 16
 
     # check hswish
     assert hasattr(quantized_model, 'hswish_activation_holder_quantizer')
     hswish_activation_holder_quantizer = quantized_model.hswish_activation_holder_quantizer
     assert isinstance(hswish_activation_holder_quantizer, PytorchActivationQuantizationHolder)
+    assert hswish_activation_holder_quantizer.activation_holder_quantizer.num_bits == 8

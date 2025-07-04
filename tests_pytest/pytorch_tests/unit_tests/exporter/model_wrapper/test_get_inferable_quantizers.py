@@ -45,13 +45,13 @@ def test_get_inferable_quantizers():
     node_mock.output_shape = 1
 
     get_activations_quantizer_for_node_mock = Mock()
-    get_activations_quantizer_for_node_mock.return_value = ActivationPOTInferableQuantizer(num_bits=4, signed=False, threshold=[4.0])
+    get_activations_quantizer_for_node_mock.return_value = ActivationPOTInferableQuantizer(num_bits=16, signed=False, threshold=[4.0])
     _, activation_quantizers = get_inferable_quantizers(node=node_mock, get_weights_quantizer_for_node=None, 
                                                         get_activations_quantizer_for_node=get_activations_quantizer_for_node_mock)
     
     assert len(activation_quantizers) == 1
     assert isinstance(activation_quantizers[0], ActivationPOTInferableQuantizer)
-    assert activation_quantizers[0].num_bits == 4
+    assert activation_quantizers[0].num_bits == 16
     assert activation_quantizers[0].signed == False
     assert activation_quantizers[0].threshold_np == 4.0
 

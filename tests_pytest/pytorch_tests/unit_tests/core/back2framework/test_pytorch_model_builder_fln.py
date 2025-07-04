@@ -102,19 +102,19 @@ def get_test_graph():
 
 def get_inferable_quantizers_mock(node):
 
-    if node.name == 'conv2' or node.name == 'fc':
+    if node.name == 'conv2' or node.name == 'relu':
         activation_quantizers = Mock()
         activation_quantizers.num_bits = 8
         activation_quantizers.signed = False
         activation_quantizers.threshold_np = 8.0
     
-    elif node.name == 'conv1':
+    elif node.name == 'conv1' or node.name == 'fc':
         activation_quantizers = Mock()
         activation_quantizers.num_bits = 16
         activation_quantizers.signed = True
         activation_quantizers.threshold_np = 16.0
         
-    elif node.name == 'sigmoid' or node.name == 'relu' or node.name == 'hswish':
+    elif node.name == 'sigmoid' or node.name == 'hswish':
         activation_quantizers = Mock()
         activation_quantizers.num_bits = 4
         activation_quantizers.signed = False
@@ -151,9 +151,9 @@ class TestPyTorchModelBuilder():
         assert hasattr(exportable_model, 'relu_activation_holder_quantizer')
         relu_activation_holder_quantizer = exportable_model.relu_activation_holder_quantizer
         assert isinstance(relu_activation_holder_quantizer, PytorchActivationQuantizationHolder)
-        assert relu_activation_holder_quantizer.activation_holder_quantizer.num_bits == 4
+        assert relu_activation_holder_quantizer.activation_holder_quantizer.num_bits == 8
         assert relu_activation_holder_quantizer.activation_holder_quantizer.signed == False
-        assert relu_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 4.0
+        assert relu_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 8.0
 
         # check conv2 (FLN_NO_QUANT)
         assert not hasattr(exportable_model, 'conv2_activation_holder_quantizer')
@@ -171,9 +171,9 @@ class TestPyTorchModelBuilder():
         fc_activation_holder_quantizer = exportable_model.fc_activation_holder_quantizer
         assert isinstance(fc_activation_holder_quantizer, PytorchFLNActivationQuantizationHolder)
         assert fc_activation_holder_quantizer.quantization_bypass == True
-        assert fc_activation_holder_quantizer.activation_holder_quantizer.num_bits == 8
-        assert fc_activation_holder_quantizer.activation_holder_quantizer.signed == False
-        assert fc_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 8.0
+        assert fc_activation_holder_quantizer.activation_holder_quantizer.num_bits == 16
+        assert fc_activation_holder_quantizer.activation_holder_quantizer.signed == True
+        assert fc_activation_holder_quantizer.activation_holder_quantizer.threshold_np == 16.0
 
         # check hswish
         assert hasattr(exportable_model, 'hswish_activation_holder_quantizer')
