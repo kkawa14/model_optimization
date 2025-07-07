@@ -15,6 +15,7 @@
 import pytest
 import numpy as np
 
+from typing import Generator
 from unittest.mock import Mock
 from model_compression_toolkit.core.common import Graph, BaseNode
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.qparams_computation import \
@@ -22,32 +23,28 @@ from model_compression_toolkit.core.common.quantization.quantization_params_gene
 from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import \
     CandidateNodeQuantizationConfig
 from model_compression_toolkit.core.common.quantization.node_quantization_config import \
-    ActivationQuantizationMode, NodeActivationQuantizationConfig
+    ActivationQuantizationMode, NodeActivationQuantizationConfig, NodeWeightsQuantizationConfig
 from model_compression_toolkit.target_platform_capabilities import OpQuantizationConfig
 from model_compression_toolkit.core import QuantizationConfig
-from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import Signedness, \
-    AttributeQuantizationConfig
+from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import Signedness
 from model_compression_toolkit.core.common.collectors.statistics_collector import StatsCollector
 from mct_quantizers import QuantizationMethod
 from model_compression_toolkit.core.common.node_prior_info import NodePriorInfo
+from model_compression_toolkit.core.common.framework_implementation import FrameworkImplementation
 
 
 class TestCalculateQuantizationParams:
     def build_op_cfg(self):
-        op_cfg = OpQuantizationConfig(
-            default_weight_attr_config=AttributeQuantizationConfig(),
-            attr_weights_configs_mapping={},
-            activation_quantization_method=QuantizationMethod.POWER_OF_TWO,
-            activation_n_bits=16,
-            enable_activation_quantization=True,
-            quantization_preserving=False,
-            supported_input_activation_n_bits=16,
-            signedness=Signedness.AUTO
-        )
+        op_cfg = Mock(spec=OpQuantizationConfig)
+        op_cfg.activation_quantization_method = QuantizationMethod.POWER_OF_TWO
+        op_cfg.activation_n_bits = 16
+        op_cfg.enable_activation_quantization = True
+        op_cfg.quantization_preserving = False
+        op_cfg.signedness = Signedness.AUTO
+
         return op_cfg
 
     def build_node(self, name='node', q_mode=ActivationQuantizationMode.QUANT):
-
         node = Mock(spec=BaseNode)
         node.name = name
         node.get_node_weights_attributes.return_value = []
@@ -68,7 +65,7 @@ class TestCalculateQuantizationParams:
 
         candidate_quantization_config = Mock(spec=CandidateNodeQuantizationConfig)
         candidate_quantization_config.activation_quantization_cfg = activation_quantization_cfg
-        candidate_quantization_config.weights_quantization_cfg = Mock()
+        candidate_quantization_config.weights_quantization_cfg = Mock(spec=NodeWeightsQuantizationConfig)
 
         node.candidates_quantization_cfg = [candidate_quantization_config]
 
@@ -98,13 +95,19 @@ class TestCalculateQuantizationParams:
         ['node_no_quant',        ActivationQuantizationMode.NO_QUANT,        [0.7, 1.4, 2.1], [None, None]],
         ['node_preserve_quant',  ActivationQuantizationMode.PRESERVE_QUANT,  [0.7, 1.4, 2.1], [None, None]],
     ])
-    def test_calculate_quantization_params(self, node_name, q_mode, input_data, expects, mocker):
+    def test_calculate_quantization_params_for_activation(self, node_name, q_mode, input_data, expects, mocker):
+        """
+        Tests that calculate quantization params for activation quantization method.
+        """
         graph = self.get_test_graph(node_name, q_mode, input_data)
 
-        mocker.patch('model_compression_toolkit.core.common.quantization.quantization_params_generation.qparams_computation._collect_nodes_for_hmse', return_value=[])
-        calculate_quantization_params(graph, Mock(), Mock())
+        mocker.patch(
+            'model_compression_toolkit.core.common.quantization.quantization_params_generation.'
+            'qparams_computation._collect_nodes_for_hmse', return_value=[])
+        calculate_quantization_params(graph, Mock(spec=FrameworkImplementation), Mock(spec=Generator))
 
-        for candidate_qc in list(graph.nodes)[0].candidates_quantization_cfg:
+        node = list(graph.nodes)[0]
+        for candidate_qc in node.candidates_quantization_cfg:
             assert type(candidate_qc.activation_quantization_cfg.activation_quantization_params) == dict
             if expects[0] is not None:
                 ### QUANT or FLN_QUANT
