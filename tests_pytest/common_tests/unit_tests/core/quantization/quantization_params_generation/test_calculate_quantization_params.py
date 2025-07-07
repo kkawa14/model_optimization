@@ -102,8 +102,9 @@ class TestCalculateQuantizationParams:
         graph = self.get_test_graph(node_name, q_mode, input_data)
 
         mocker.patch(
-            'model_compression_toolkit.core.common.quantization.quantization_params_generation.'
-            'qparams_computation._collect_nodes_for_hmse', return_value=[])
+            'model_compression_toolkit.core.common.quantization.quantization_params_generation.qparams_computation._collect_nodes_for_hmse',
+            return_value=[])
+
         calculate_quantization_params(graph, Mock(spec=FrameworkImplementation), Mock(spec=Generator))
 
         node = list(graph.nodes)[0]
