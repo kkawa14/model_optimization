@@ -81,8 +81,7 @@ class TestCalculateQuantizationParams:
             graph.node_to_out_stats_collector[n].hc._bins = np.array(data)
             graph.node_to_out_stats_collector[n].hc._counts = np.array([1, 1])
 
-        quant_config = QuantizationConfig()
-        return graph, quant_config
+        return graph
 
     ### test pattern for ActivationQuantizationMode
     @pytest.mark.parametrize(["node_name", "q_mode", "input_data", "expects"], [
@@ -93,13 +92,13 @@ class TestCalculateQuantizationParams:
         ['node_no_quant',        ActivationQuantizationMode.NO_QUANT,        [0.7, 1.4, 2.1], [None, None]],
         ['node_preserve_quant',  ActivationQuantizationMode.PRESERVE_QUANT,  [0.7, 1.4, 2.1], [None, None]],
     ])
-    def test_calculate_quantization_params_for_activation(self, node_name, q_mode, input_data, expects, mocker):
+    def test_calculate_quantization_params_for_activation(self, node_name, q_mode, input_data, expects):
         """
         Tests that calculate quantization params for activation quantization method.
         """
-        graph, quant_config = self.get_test_graph(node_name, q_mode, input_data)
+        graph = self.get_test_graph(node_name, q_mode, input_data)
 
-        calculate_quantization_params(graph, quant_config, Mock(), Mock())
+        calculate_quantization_params(graph, QuantizationConfig(), Mock(), Mock())
 
         node = list(graph.nodes)[0]
         for candidate_qc in node.candidates_quantization_cfg:
