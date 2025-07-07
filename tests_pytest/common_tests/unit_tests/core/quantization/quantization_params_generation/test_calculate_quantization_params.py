@@ -51,12 +51,12 @@ class TestCalculateQuantizationParams:
 
         if q_mode == ActivationQuantizationMode.QUANT:
             node.is_activation_quantization_enabled.return_value = True
-        else:
+            node.is_fln_quantization.return_value = False
+        elif q_mode == ActivationQuantizationMode.FLN_QUANT:
             node.is_activation_quantization_enabled.return_value = False
-
-        if q_mode == ActivationQuantizationMode.FLN_QUANT:
             node.is_fln_quantization.return_value = True
         else:
+            node.is_activation_quantization_enabled.return_value = False
             node.is_fln_quantization.return_value = False
 
         activation_quantization_cfg = NodeActivationQuantizationConfig(op_cfg=self.build_op_cfg())
