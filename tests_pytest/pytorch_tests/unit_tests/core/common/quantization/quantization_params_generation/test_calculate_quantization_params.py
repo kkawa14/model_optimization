@@ -14,7 +14,6 @@
 # ==============================================================================
 import pytest
 import numpy as np
-import torch
 
 from unittest.mock import Mock
 from model_compression_toolkit.core.common import Graph, BaseNode
@@ -34,7 +33,7 @@ from model_compression_toolkit.core.common.node_prior_info import NodePriorInfo
 
 
 class TestCalculateQuantizationParams:
-    def build_node(self, name='node', framework_attr={}, layer_class=torch.nn.Conv2d,
+    def build_node(self, name='node', framework_attr={}, layer_class="Dummy",
                    q_mode=ActivationQuantizationMode.QUANT):
 
         node = Mock(spec=BaseNode)
