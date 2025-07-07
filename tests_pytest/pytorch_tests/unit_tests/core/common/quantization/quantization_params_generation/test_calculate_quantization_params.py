@@ -33,15 +33,23 @@ from model_compression_toolkit.core.common.node_prior_info import NodePriorInfo
 
 
 class TestCalculateQuantizationParams:
-    def build_node(self, name='node', framework_attr={}, layer_class="Dummy",
-                   q_mode=ActivationQuantizationMode.QUANT):
+    def build_op_cfg(self):
+        op_cfg = OpQuantizationConfig(
+            default_weight_attr_config=AttributeQuantizationConfig(),
+            attr_weights_configs_mapping={},
+            activation_quantization_method=QuantizationMethod.POWER_OF_TWO,
+            activation_n_bits=16,
+            enable_activation_quantization=True,
+            quantization_preserving=False,
+            supported_input_activation_n_bits=16,
+            signedness=Signedness.AUTO
+        )
+        return op_cfg
+
+    def build_node(self, name='node', q_mode=ActivationQuantizationMode.QUANT):
 
         node = Mock(spec=BaseNode)
         node.name = name
-        node.layer_class = layer_class
-        node.prior_info = Mock(min_output=None, max_output=None)
-        node.minmax = (None, None)
-        node.get_weights_by_keys.return_value = None
         node.get_node_weights_attributes.return_value = []
 
         if q_mode == ActivationQuantizationMode.QUANT:
@@ -54,18 +62,7 @@ class TestCalculateQuantizationParams:
         else:
             node.is_fln_quantization.return_value = False
 
-
-        op_cfg = OpQuantizationConfig(
-            default_weight_attr_config=AttributeQuantizationConfig(),
-            attr_weights_configs_mapping={},
-            activation_quantization_method=QuantizationMethod.POWER_OF_TWO,
-            activation_n_bits=16,
-            enable_activation_quantization=True,
-            quantization_preserving=False,
-            supported_input_activation_n_bits=16,
-            signedness=Signedness.AUTO
-        )
-        activation_quantization_cfg = NodeActivationQuantizationConfig(op_cfg=op_cfg)
+        activation_quantization_cfg = NodeActivationQuantizationConfig(op_cfg=self.build_op_cfg())
         activation_quantization_cfg.set_qc(QuantizationConfig())
         activation_quantization_cfg.quant_mode = q_mode
 
