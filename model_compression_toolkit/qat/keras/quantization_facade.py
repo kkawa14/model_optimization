@@ -38,7 +38,6 @@ if FOUND_TF:
 
     from model_compression_toolkit.trainable_infrastructure import KerasTrainableQuantizationWrapper
     from model_compression_toolkit.core.keras.keras_implementation import KerasImplementation
-    from model_compression_toolkit.core.keras.keras_model_validation import KerasModelValidation
     from model_compression_toolkit.target_platform_capabilities.constants import DEFAULT_TP_MODEL
     from model_compression_toolkit.core.keras.default_framework_info import set_keras_info
 
@@ -167,15 +166,13 @@ if FOUND_TF:
 
              >>> quantized_model = tf.keras.models.load_model(model_file, custom_objects=custom_objects)
 
-             For more configuration options, please take a look at our `API documentation <https://sony.github.io/model_optimization/api/api_docs/modules/mixed_precision_quantization_config.html>`_.
+             For more configuration options, please take a look at our `API documentation <https://sonysemiconductorsolutions.github.io/mct-model-optimization/api/api_docs/modules/mixed_precision_quantization_config.html>`_.
 
          """
 
         Logger.warning(f"keras_quantization_aware_training_init_experimental is experimental and is subject to future changes."
                        f"If you encounter an issue, please open an issue in our GitHub "
                        f"project https://github.com/sony/model_optimization")
-
-        KerasModelValidation(model=in_model).validate()
 
         if core_config.is_mixed_precision_enabled:
             if not isinstance(core_config.mixed_precision_config, MixedPrecisionQuantizationConfig):

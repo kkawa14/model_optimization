@@ -38,7 +38,6 @@ if FOUND_TF:
         AttachTpcToKeras
     from model_compression_toolkit.core.keras.default_framework_info import set_keras_info
     from model_compression_toolkit.core.keras.keras_implementation import KerasImplementation
-    from model_compression_toolkit.core.keras.keras_model_validation import KerasModelValidation
     from tensorflow.keras.models import Model
     from model_compression_toolkit.target_platform_capabilities.constants import DEFAULT_TP_MODEL
     from model_compression_toolkit.exporter.model_wrapper import get_exportable_keras_model
@@ -122,14 +121,12 @@ if FOUND_TF:
 
             >>> quantized_model, quantization_info = mct.ptq.keras_post_training_quantization(model, repr_datagen, ru, core_config=config)
 
-            For more configuration options, please take a look at our `API documentation <https://sony.github.io/model_optimization/api/api_docs/modules/mixed_precision_quantization_config.html>`_.
+            For more configuration options, please take a look at our `API documentation <https://sonysemiconductorsolutions.github.io/mct-model-optimization/api/api_docs/modules/mixed_precision_quantization_config.html>`_.
 
          """
 
         if core_config.debug_config.bypass:
             return in_model, None
-
-        KerasModelValidation(model=in_model).validate()
 
         if core_config.is_mixed_precision_enabled:
             if not isinstance(core_config.mixed_precision_config, MixedPrecisionQuantizationConfig):
