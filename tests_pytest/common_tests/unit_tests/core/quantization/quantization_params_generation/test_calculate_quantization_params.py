@@ -15,7 +15,6 @@
 import pytest
 import numpy as np
 
-from typing import Generator
 from unittest.mock import Mock
 from model_compression_toolkit.core.common import Graph, BaseNode
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.qparams_computation import \
@@ -30,7 +29,6 @@ from model_compression_toolkit.target_platform_capabilities.schema.mct_current_s
 from model_compression_toolkit.core.common.collectors.statistics_collector import StatsCollector
 from mct_quantizers import QuantizationMethod
 from model_compression_toolkit.core.common.node_prior_info import NodePriorInfo
-from model_compression_toolkit.core.common.framework_implementation import FrameworkImplementation
 
 
 class TestCalculateQuantizationParams:
@@ -101,7 +99,7 @@ class TestCalculateQuantizationParams:
         """
         graph, quant_config = self.get_test_graph(node_name, q_mode, input_data)
 
-        calculate_quantization_params(graph, quant_config, Mock(spec=FrameworkImplementation), Mock(spec=Generator))
+        calculate_quantization_params(graph, quant_config, Mock(), Mock())
 
         node = list(graph.nodes)[0]
         for candidate_qc in node.candidates_quantization_cfg:
