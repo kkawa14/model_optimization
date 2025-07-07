@@ -17,32 +17,27 @@ import numpy as np
 import torch
 
 from unittest.mock import Mock
-from typing import List
 from model_compression_toolkit.core.common import Graph, BaseNode
-
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.qparams_computation import \
     calculate_quantization_params
 from model_compression_toolkit.core.common.quantization.candidate_node_quantization_config import \
-    CandidateNodeQuantizationConfig, NodeQuantizationConfig
+    CandidateNodeQuantizationConfig
 from model_compression_toolkit.core.common.quantization.node_quantization_config import \
     ActivationQuantizationMode, NodeActivationQuantizationConfig
 from model_compression_toolkit.target_platform_capabilities import OpQuantizationConfig
 from model_compression_toolkit.core import QuantizationConfig
 from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import Signedness, \
     AttributeQuantizationConfig
-from model_compression_toolkit.core.pytorch.default_framework_info import PyTorchInfo
-from model_compression_toolkit.core.common.framework_info import set_fw_info, get_fw_info
-from model_compression_toolkit.core.pytorch.pytorch_implementation import PytorchImplementation
 from model_compression_toolkit.core.common.collectors.statistics_collector import StatsCollector
 from mct_quantizers import QuantizationMethod
-from model_compression_toolkit.core import QuantizationErrorMethod
+from model_compression_toolkit.core.common.node_prior_info import NodePriorInfo
 
 
 class TestCalculateQuantizationParams:
     def build_node(self, name='node', framework_attr={}, layer_class=torch.nn.Conv2d,
                    q_mode=ActivationQuantizationMode.QUANT):
 
-        node = Mock()
+        node = Mock(spec=BaseNode)
         node.name = name
         node.layer_class = layer_class
         node.prior_info = Mock(min_output=None, max_output=None)
@@ -84,23 +79,19 @@ class TestCalculateQuantizationParams:
         return node
 
     def get_test_graph(self, node_name, q_mode, data):
-        set_fw_info(PyTorchInfo)
-
         node = self.build_node(node_name, q_mode=q_mode)
-
         graph = Graph('graph_name', input_nodes=[node], nodes=[node], output_nodes=[node], edge_list=[])
-        fw_impl = PytorchImplementation()
 
         graph.node_to_out_stats_collector = dict()
         for n in graph.nodes():
-            n.prior_info = fw_impl.get_node_prior_info(node=n, graph=graph)
+            n.prior_info = NodePriorInfo()
 
-            graph.node_to_out_stats_collector[n] = StatsCollector(init_min_value=0.0, init_max_value=1.0, out_channel_axis=get_fw_info().out_channel_axis_mapping.get(n.type))
+            graph.node_to_out_stats_collector[n] = StatsCollector(init_min_value=0.0, init_max_value=1.0, out_channel_axis=0)
             graph.node_to_out_stats_collector[n].hc._n_bins = 3
             graph.node_to_out_stats_collector[n].hc._bins = np.array(data)
             graph.node_to_out_stats_collector[n].hc._counts = np.array([1, 1])
 
-        return graph, fw_impl
+        return graph
 
     ### test pattern for ActivationQuantizationMode
     @pytest.mark.parametrize(["node_name", "q_mode", "input_data", "expects"], [
@@ -111,23 +102,23 @@ class TestCalculateQuantizationParams:
         ['node_no_quant',        ActivationQuantizationMode.NO_QUANT,        [0.7, 1.4, 2.1], [None, None]],
         ['node_preserve_quant',  ActivationQuantizationMode.PRESERVE_QUANT,  [0.7, 1.4, 2.1], [None, None]],
     ])
-    def test_calculate_quantization_params(self, node_name, q_mode, input_data, expects):
-        graph, fw_impl = self.get_test_graph(node_name, q_mode, input_data)
+    def test_calculate_quantization_params(self, node_name, q_mode, input_data, expects, mocker):
+        graph = self.get_test_graph(node_name, q_mode, input_data)
 
-        calculate_quantization_params(graph, fw_impl, None)
+        mocker.patch('model_compression_toolkit.core.common.quantization.quantization_params_generation.qparams_computation._collect_nodes_for_hmse', return_value=[])
+        calculate_quantization_params(graph, Mock(), Mock())
 
-        for node in graph.nodes:
-            for candidate_qc in node.candidates_quantization_cfg:
-                assert type(candidate_qc.activation_quantization_cfg.activation_quantization_params) == dict
-                if expects[0] is not None:
-                    ### QUANT or FLN_QUANT
-                    assert 'threshold' in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
-                    assert 'is_signed' in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
+        for candidate_qc in list(graph.nodes)[0].candidates_quantization_cfg:
+            assert type(candidate_qc.activation_quantization_cfg.activation_quantization_params) == dict
+            if expects[0] is not None:
+                ### QUANT or FLN_QUANT
+                assert 'threshold' in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
+                assert 'is_signed' in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
 
-                    threshold = candidate_qc.activation_quantization_cfg.activation_quantization_params['threshold']
-                    is_signed = candidate_qc.activation_quantization_cfg.activation_quantization_params['is_signed']
-                    assert threshold == expects[0]
-                    assert is_signed == expects[1]
-                else:
-                    assert 'threshold' not in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
-                    assert 'is_signed' not in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
+                threshold = candidate_qc.activation_quantization_cfg.activation_quantization_params['threshold']
+                is_signed = candidate_qc.activation_quantization_cfg.activation_quantization_params['is_signed']
+                assert threshold == expects[0]
+                assert is_signed == expects[1]
+            else:
+                assert 'threshold' not in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
+                assert 'is_signed' not in candidate_qc.activation_quantization_cfg.activation_quantization_params.keys()
