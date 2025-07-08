@@ -59,7 +59,6 @@ def build_qc(q_mode=ActivationQuantizationMode.QUANT):
         signedness=Signedness.AUTO
     )
     a_qcfg = NodeActivationQuantizationConfig(op_cfg=op_cfg)
-    a_qcfg.set_qc(QuantizationConfig())
     a_qcfg.quant_mode = q_mode
     w_qcfg = NodeWeightsQuantizationConfig(op_cfg=op_cfg,
                                            weights_channels_axis=ChannelAxisMapping(0, 1),
