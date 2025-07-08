@@ -29,10 +29,7 @@ from model_compression_toolkit.core.common.quantization.quantization_params_gene
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.lut_kmeans_params import \
     lut_kmeans_histogram
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.qparams_activations_computation import (
-    _get_histogram_data,
-    _determine_signedness,
-    compute_activation_qparams, _get_activation_quantization_params_fn
-)
+    _get_histogram_data, _determine_signedness, compute_activation_qparams, _get_activation_quantization_params_fn)
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.symmetric_selection import \
     symmetric_selection_histogram
 from model_compression_toolkit.core.common.quantization.quantization_params_generation.uniform_selection import \
@@ -58,7 +55,7 @@ class TestActivationQParams:
         op_cfg = OpQuantizationConfig(
             default_weight_attr_config=AttributeQuantizationConfig(),
             attr_weights_configs_mapping={},
-            activation_quantization_method=QuantizationMethod.POWER_OF_TWO,
+            activation_quantization_method=quant_method,
             activation_n_bits=n_bits,
             supported_input_activation_n_bits=n_bits,
             enable_activation_quantization=True,
@@ -69,8 +66,6 @@ class TestActivationQParams:
             signedness=signedness
         )
         activation_quant_cfg = NodeActivationQuantizationConfig(op_cfg)
-        activation_quant_cfg.set_qc(QuantizationConfig())
-        activation_quant_cfg.activation_quantization_method = quant_method
         return activation_quant_cfg
 
     def test_get_histogram_data_error_method(self):
@@ -79,18 +74,14 @@ class TestActivationQParams:
         # Test cases:
         # - When activation_error_method is MSE, the normal histogram collector (hc) is called.
         # - When activation_error_method is HMSE, the weighted histogram collector (weighted_hc) is called.
-        activation_quant_cfg = Mock(spec=NodeActivationQuantizationConfig)
         stats = self._create_stats_container(out_channel_axis=1)
-
-        activation_quant_cfg.z_threshold = 1
 
         # Set return values for histogram collectors.
         stats.hc.get_histogram.return_value = ([1, 2, 3, 4], [10, 20, 30])
         stats.weighted_hc.get_histogram.return_value = ([5, 6, 7, 8], [40, 50, 60])
 
         # Test for MSE error method.
-        activation_quant_cfg.activation_error_method = QuantizationErrorMethod.MSE
-        _get_histogram_data(activation_quant_cfg, stats)
+        _get_histogram_data(stats, QuantizationErrorMethod.MSE, z_threshold=1)
         stats.hc.get_histogram.assert_called_once()
         stats.weighted_hc.get_histogram.assert_not_called()
 
@@ -99,8 +90,7 @@ class TestActivationQParams:
         stats.weighted_hc.get_histogram.reset_mock()
 
         # Test for HMSE error method.
-        activation_quant_cfg.activation_error_method = QuantizationErrorMethod.HMSE
-        _get_histogram_data(activation_quant_cfg, stats)
+        _get_histogram_data(stats, QuantizationErrorMethod.HMSE, z_threshold=1)
         stats.weighted_hc.get_histogram.assert_called_once()
         stats.hc.get_histogram.assert_not_called()
 
@@ -169,7 +159,7 @@ class TestActivationQParams:
         mocker.patch(f'{root}._get_histogram_data', return_value=(np.array([-1, 0, 1]), np.array([3, 4])))
         stat_collector_mock = mocker.Mock(spec_set=StatsCollector, get_min_max_values=lambda: (-1, 1))
 
-        ret = compute_activation_qparams(activation_quant_cfg, node_prior_info, stat_collector_mock)
+        ret = compute_activation_qparams(Mock(), activation_quant_cfg, node_prior_info, stat_collector_mock)
         get_params_fn_mock.assert_called_once_with(quant_method, no_clipping=is_bounded)
         assert ret == get_params_fn_mock.return_value.return_value
 
@@ -197,5 +187,27 @@ class TestActivationQParams:
         nodes_prior_info.is_output_bounded = Mock(return_value=True)
 
         activation_quant_cfg = self._create_activation_quant_cfg(quant_method, n_bits=2)
-        result = compute_activation_qparams(activation_quant_cfg, nodes_prior_info, stats)
+        result = compute_activation_qparams(QuantizationConfig(), activation_quant_cfg, nodes_prior_info, stats)
         assert result == expected_result
+
+    def test_overriden_z_thresh(self, mocker):
+        """ Check that correct z-threshold is passed to _get_histogram_data """
+        spy = mocker.patch('model_compression_toolkit.core.common.quantization.quantization_params_generation.'
+                           'qparams_activations_computation._get_histogram_data',
+                           return_value=(np.array([1, 2]), np.array([100])))
+        stat_collector_mock = mocker.Mock(spec_set=StatsCollector, get_min_max_values=lambda: (-1, 1))
+
+        acfg = self._create_activation_quant_cfg(QuantizationMethod.POWER_OF_TWO)
+        assert acfg.z_threshold is None
+        compute_activation_qparams(QuantizationConfig(z_threshold=100), acfg, NodePriorInfo(), stat_collector_mock)
+        # z-threshold from quant config is used
+        assert spy.called_once_with(stat_collector_mock,
+                                    activation_error_method=QuantizationMethod.POWER_OF_TWO,
+                                    z_threshold=100)
+
+        # z-threshold from the node should be used
+        acfg.z_threshold = 5
+        compute_activation_qparams(QuantizationConfig(z_threshold=100), acfg, NodePriorInfo(), stat_collector_mock)
+        assert spy.called_with(stat_collector_mock,
+                               activation_error_method=QuantizationMethod.POWER_OF_TWO,
+                               z_threshold=5)
