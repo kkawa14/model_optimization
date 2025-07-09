@@ -107,7 +107,9 @@ class NetworkTest:
             arc = mct.gptq.GradientPTQConfig(n_epochs=2,
                                              optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
                                              optimizer_rest=tf.keras.optimizers.Adam(learning_rate=0.0001),
-                                             loss=multiple_tensors_mse_loss, train_bias=True, hessian_weights_config=None,
+                                             loss=multiple_tensors_mse_loss,
+                                             train_bias=True,
+                                             hessian_weights_config=None,
                                              gradual_activation_quantization_config= GradualActivationQuantizationConfig(),
                                              regularization_factor=1)
 
