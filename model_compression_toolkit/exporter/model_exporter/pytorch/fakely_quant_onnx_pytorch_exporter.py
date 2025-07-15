@@ -24,6 +24,8 @@ from model_compression_toolkit.logger import Logger
 from model_compression_toolkit.core.pytorch.utils import to_torch_tensor
 from model_compression_toolkit.exporter.model_exporter.pytorch.base_pytorch_exporter import BasePyTorchExporter
 from mct_quantizers import pytorch_quantizers
+from mct_quantizers.pytorch.preserving_activation_quantization_holder import PytorchPreservingActivationQuantizationHolder
+from mct_quantizers.pytorch.fln_activation_quantization_holder import PytorchFLNActivationQuantizationHolder
 
 if FOUND_ONNX:
     import onnx
@@ -180,14 +182,36 @@ if FOUND_ONNX:
             """
 
             for n, m in self.model.named_modules():
-                if isinstance(m, PytorchActivationQuantizationHolder):
+                print("\n n", n)
+                print("m", m)
+                print("type(m)", type(m))
+                #print("m", vars(m))
+           
+                if isinstance(m, PytorchPreservingActivationQuantizationHolder):
+                    assert isinstance(m.activation_holder_quantizer, pytorch_quantizers.BasePyTorchInferableQuantizer)
+                    m.quantization_bypass = False
+                    m.activation_holder_quantizer.enable_custom_impl()    
+                elif isinstance(m, PytorchFLNActivationQuantizationHolder):
+                    assert isinstance(m.activation_holder_quantizer, pytorch_quantizers.BasePyTorchInferableQuantizer)
+                    m.quantization_bypass = False
+                    m.activation_holder_quantizer.enable_custom_impl()   
+                elif isinstance(m, PytorchActivationQuantizationHolder):
                     assert isinstance(m.activation_holder_quantizer, pytorch_quantizers.BasePyTorchInferableQuantizer)
                     m.activation_holder_quantizer.enable_custom_impl()
-
-                if isinstance(m, PytorchQuantizationWrapper):
+                elif isinstance(m, PytorchQuantizationWrapper):
                     for wq in m.weights_quantizers.values():
                         assert isinstance(wq, pytorch_quantizers.BasePyTorchInferableQuantizer)
                         wq.enable_custom_impl()
+
+        #    for n, m in self.model.named_modules():
+        #        if isinstance(m, PytorchActivationQuantizationHolder):
+        #            assert isinstance(m.activation_holder_quantizer, pytorch_quantizers.BasePyTorchInferableQuantizer)
+        #            m.activation_holder_quantizer.enable_custom_impl()
+#
+        #        if isinstance(m, PytorchQuantizationWrapper):
+        #            for wq in m.weights_quantizers.values():
+        #                assert isinstance(wq, pytorch_quantizers.BasePyTorchInferableQuantizer)
+        #                wq.enable_custom_impl()
 
 else:
     def FakelyQuantONNXPyTorchExporter(*args, **kwargs):  # pragma: no cover
