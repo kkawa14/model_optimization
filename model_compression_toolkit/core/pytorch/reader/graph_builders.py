@@ -121,7 +121,7 @@ def _extract_torch_layer_data(node_module: torch.nn.Module) -> Tuple[Any, Dict[s
         framework_attr[BIAS] = False if node_module.bias is None else True
 
     # Extract layer weights and named buffers.
-    weights = {n: w for n, w in _extract_parameters_and_buffers(node_module).items() if len(w.shape) > 0}
+    weights = {n: w for n, w in _extract_parameters_and_buffers(node_module).items()}
     return node_type, weights, framework_attr
 
 
@@ -276,6 +276,9 @@ def nodes_builder(model: GraphModule,
         # addresses of the original tensors.
         # Only after all reuse marking is complete do we convert to numpy arrays.
         for weight_name, weight_value in weights.items():
+            # Convert scalar tensors to 1D tensors with single element to ensure shape attribute exists
+            if isinstance(weight_value, (torch.Tensor, np.ndarray)) and weight_value.ndim == 0:
+                weight_value = weight_value.unsqueeze(0)
             weights[weight_name] = to_numpy(weight_value)
 
         # Initiate graph nodes.

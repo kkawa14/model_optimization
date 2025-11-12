@@ -131,13 +131,25 @@ class MinMaxPerChannelCollector(BaseCollector):
         """
 
         axis = (len(x.shape) - 1) if self.axis == LAST_AXIS else self.axis
-        n = x.shape[axis]
-        transpose_index = [axis, *[i for i in range(len(x.shape)) if i != axis]]
-        x_reshape = np.reshape(np.transpose(x, transpose_index), [n, -1])
-        if self.state is None:
-            x_max = np.max(x_reshape, axis=-1)
-            x_min = np.min(x_reshape, axis=-1)
+
+        # Handle case where axis is out of bounds for the tensor shape
+        if axis >= len(x.shape) or axis < -len(x.shape):
+            # For scalar or low-dimensional tensors, compute global min/max
+            x_max = np.max(x)
+            x_min = np.min(x)
+            if self.state is None:
+                self.state = np.array([[x_max, x_min]])
+            else:
+                self.state[0, 0] = np.maximum(x_max, self.state[0, 0])
+                self.state[0, 1] = np.minimum(x_min, self.state[0, 1])
         else:
-            x_max = np.maximum(np.max(x_reshape, axis=-1), self.state[:, 0])
-            x_min = np.minimum(np.min(x_reshape, axis=-1), self.state[:, 1])
-        self.state = np.stack([x_max, x_min], axis=-1)
+            n = x.shape[axis]
+            transpose_index = [axis, *[i for i in range(len(x.shape)) if i != axis]]
+            x_reshape = np.reshape(np.transpose(x, transpose_index), [n, -1])
+            if self.state is None:
+                x_max = np.max(x_reshape, axis=-1)
+                x_min = np.min(x_reshape, axis=-1)
+            else:
+                x_max = np.maximum(np.max(x_reshape, axis=-1), self.state[:, 0])
+                x_min = np.minimum(np.min(x_reshape, axis=-1), self.state[:, 1])
+            self.state = np.stack([x_max, x_min], axis=-1)
