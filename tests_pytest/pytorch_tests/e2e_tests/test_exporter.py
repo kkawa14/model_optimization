@@ -5,8 +5,6 @@ import onnx
 import onnxruntime as ort
 import numpy as np
 
-np.set_printoptions(threshold=np.inf, linewidth=np.inf, precision=10)
-
 import mct_quantizers as mctq
 from model_compression_toolkit.ptq.pytorch.quantization_facade import pytorch_post_training_quantization
 from model_compression_toolkit.qat.pytorch.quantization_facade import pytorch_quantization_aware_training_init_experimental, \
@@ -104,12 +102,15 @@ def onnx_reader(model_file, quantization_holder):
 
 def onnx_runner(model_file, model_input, is_mctq=False):
     # Load the model
-    if is_mctq:
-        session = ort.InferenceSession(model_file,
-                                       mctq.get_ort_session_options(),
-                                       providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-    else:
-        session = ort.InferenceSession(model_file)
+    # if is_mctq:
+    #     session = ort.InferenceSession(model_file,
+    #                                    mctq.get_ort_session_options(),
+    #                                    providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+    # else:
+    #     session = ort.InferenceSession(model_file)
+    session = ort.InferenceSession(model_file,
+                                    mctq.get_ort_session_options(),
+                                    providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 
     # Run inference
     input_feed = {i.name: m_input for i, m_input in zip(session.get_inputs(), model_input)}
@@ -235,11 +236,6 @@ class TestExporter:
         if not isinstance(torch_outputs, (list, tuple)):
             torch_outputs = [torch_outputs]
         torch_outputs = [o.detach().cpu().numpy() for o in torch_outputs]
-
-        for onnx_output, torch_output in zip(onnx_outputs, torch_outputs):
-            print(f"onnx  = {onnx_outputs}")
-            print(f"torch = {torch_outputs}")
-            print(f"RMSE = {rmse(onnx_output, torch_output):.10f}, atol = {tol}, check result = {np.isclose(rmse(onnx_output, torch_output), 0, atol=tol)}")
 
         assert np.all([np.isclose(rmse(onnx_output, torch_output), 0, atol=tol)
                        for onnx_output, torch_output in zip(onnx_outputs, torch_outputs)])
