@@ -232,6 +232,9 @@ class TestExporter:
             torch_outputs = [torch_outputs]
         torch_outputs = [o.detach().cpu().numpy() for o in torch_outputs]
 
+        for onnx_output, torch_output in zip(onnx_outputs, torch_outputs):
+            print(f"RMSE = {rmse(onnx_output, torch_output)}, atol = {tol}")
+
         assert np.all([np.isclose(rmse(onnx_output, torch_output), 0, atol=tol)
                        for onnx_output, torch_output in zip(onnx_outputs, torch_outputs)])
 
