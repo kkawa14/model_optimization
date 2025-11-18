@@ -157,10 +157,10 @@ class ExportModel(torch.nn.Module):
 
 class TestExporter:
     def setup_method(self):
-        set_seed(1)
         self.in_channels = 3
         self.out_channels = 4
         self.onnx_file = f"./tmp_model_{np.random.randint(1e10)}.onnx"
+        set_seed(1)  # Move after random file name generation
         self.qname_dict = {mctq.QuantizationMethod.POWER_OF_TWO: 'ActivationPOTQuantizer',
                            mctq.QuantizationMethod.SYMMETRIC: 'ActivationSymmetricQuantizer',
                            mctq.QuantizationMethod.UNIFORM: 'ActivationUniformQuantizer'
@@ -227,13 +227,16 @@ class TestExporter:
         model_input = [i.astype(np.float32) for i in next(rep_dataset())]
         onnx_outputs = onnx_runner(self.onnx_file, model_input,
                                    is_mctq=quantization_format == QuantizationFormat.MCTQ)
-        torch_outputs = quantized_model(*model_input)
+        with torch.no_grad():
+            torch_outputs = quantized_model(*model_input)
         if not isinstance(torch_outputs, (list, tuple)):
             torch_outputs = [torch_outputs]
         torch_outputs = [o.detach().cpu().numpy() for o in torch_outputs]
 
         for onnx_output, torch_output in zip(onnx_outputs, torch_outputs):
-            print(f"RMSE = {rmse(onnx_output, torch_output)}, atol = {tol}, check result = {np.isclose(rmse(onnx_output, torch_output), 0, atol=tol)}")
+            print(f"onnx  = {onnx_outputs}")
+            print(f"torch = {torch_outputs}")
+            print(f"RMSE = {rmse(onnx_output, torch_output):.10f}, atol = {tol}, check result = {np.isclose(rmse(onnx_output, torch_output), 0, atol=tol)}")
 
         assert np.all([np.isclose(rmse(onnx_output, torch_output), 0, atol=tol)
                        for onnx_output, torch_output in zip(onnx_outputs, torch_outputs)])
