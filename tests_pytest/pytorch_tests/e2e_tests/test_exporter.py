@@ -102,15 +102,12 @@ def onnx_reader(model_file, quantization_holder):
 
 def onnx_runner(model_file, model_input, is_mctq=False):
     # Load the model
-    # if is_mctq:
-    #     session = ort.InferenceSession(model_file,
-    #                                    mctq.get_ort_session_options(),
-    #                                    providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-    # else:
-    #     session = ort.InferenceSession(model_file)
-    session = ort.InferenceSession(model_file,
-                                    mctq.get_ort_session_options(),
-                                    providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+    if is_mctq:
+        session = ort.InferenceSession(model_file,
+                                       mctq.get_ort_session_options(),
+                                       providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+    else:
+        session = ort.InferenceSession(model_file)
 
     # Run inference
     input_feed = {i.name: m_input for i, m_input in zip(session.get_inputs(), model_input)}
@@ -226,7 +223,6 @@ class TestExporter:
         assert len(output_names) == len(exported_output_names)
 
     def _assert_outputs_match(self, quantized_model, rep_dataset, quantization_format, tol=1e-8):
-        # pass
         model_input = [i.astype(np.float32) for i in next(rep_dataset())]
         onnx_outputs = onnx_runner(self.onnx_file, model_input,
                                    is_mctq=quantization_format == QuantizationFormat.MCTQ)
@@ -341,7 +337,7 @@ class TestExporter:
                                              output_names=output_names)
         self._assert_outputs_names(output_names=output_names)
 
-    @pytest.mark.parametrize('abits, tol', ([8, 1e-4], [16, 1e-2]))
+    @pytest.mark.parametrize('abits, tol', ([8, 1e-2], [16, 1e-4]))
     def test_mct_ptq_and_exporter_fq(self, abits, tol):
         quantized_model = self._run_mct(self.get_model(), self.representative_dataset(1), abits, mctq.QuantizationMethod.POWER_OF_TWO)
         onnx_model_dict = self._run_exporter(quantized_model, self.representative_dataset(1), QuantizationFormat.FAKELY_QUANT)
@@ -376,7 +372,7 @@ class TestExporter:
         self._assert_quant_params_match(quantized_model, onnx_model_dict, a_qmethod)
         self._assert_outputs_match(quantized_model, self.representative_dataset(1), QuantizationFormat.MCTQ, tol=tol)
 
-    @pytest.mark.parametrize('abits, tol', ([8, 1e-8], [16, 1e-2]))
+    @pytest.mark.parametrize('abits, tol', ([8, 1e-2], [16, 1e-4]))
     def test_mct_qat_and_exporter_fq(self, abits, tol):
         quantized_model = self._run_mct_qat(self.get_model(), self.representative_dataset(1), abits, mctq.QuantizationMethod.POWER_OF_TWO)
         onnx_model_dict = self._run_exporter(quantized_model, self.representative_dataset(1), QuantizationFormat.FAKELY_QUANT)
