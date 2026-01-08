@@ -121,7 +121,7 @@ def _extract_torch_layer_data(node_module: torch.nn.Module) -> Tuple[Any, Dict[s
         framework_attr[BIAS] = False if node_module.bias is None else True
 
     # Extract layer weights and named buffers.
-    weights = {n: w for n, w in _extract_parameters_and_buffers(node_module).items()}
+    weights = {n: w for n, w in _extract_parameters_and_buffers(node_module).items() if len(w.shape) > 0}
     return node_type, weights, framework_attr
 
 
