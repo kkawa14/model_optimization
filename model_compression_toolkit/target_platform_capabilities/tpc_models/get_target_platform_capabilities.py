@@ -12,50 +12,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from model_compression_toolkit.constants import TENSORFLOW, PYTORCH
-from model_compression_toolkit.target_platform_capabilities.constants import DEFAULT_TP_MODEL, IMX500_TP_MODEL, \
-    TFLITE_TP_MODEL, QNNPACK_TP_MODEL
+from model_compression_toolkit.target_platform_capabilities.constants import IMX500_TP_MODEL, TPC_V1_0, TPC_V4_0, TPC_V5_0, \
+    SDSP_V3_14, SDSP_V3_16, SDSP_V3_17
 from model_compression_toolkit.target_platform_capabilities.schema.mct_current_schema import TargetPlatformCapabilities
-
-from model_compression_toolkit.target_platform_capabilities.tpc_models.imx500_tpc.v1.tpc import get_tpc as get_tpc_imx500_v1
-from model_compression_toolkit.target_platform_capabilities.tpc_models.tflite_tpc.v1.tpc import get_tpc as get_tpc_tflite_v1
-from model_compression_toolkit.target_platform_capabilities.tpc_models.qnnpack_tpc.v1.tpc import get_tpc as get_tpc_qnnpack_v1
+from model_compression_toolkit.target_platform_capabilities.tpc_models import generate_tpc_func
 
 
-# TODO: These methods need to be replaced once modifying the TPC API.
-
-def get_target_platform_capabilities(fw_name: str,
-                                     target_platform_name: str,
-                                     target_platform_version: str = None) -> TargetPlatformCapabilities:
+def get_target_platform_capabilities(tpc_version: str = TPC_V1_0,
+                                     device_type: str = IMX500_TP_MODEL) -> TargetPlatformCapabilities:
     """
-    This is a degenerated function that only returns the MCT default TargetPlatformCapabilities object, to comply with the
-    existing TPC API.
+    Retrieves target platform capabilities model based on tpc version and the specified device type.
 
     Args:
-        fw_name: Framework name of the FrameworkQuantizationCapabilities.
-        target_platform_name: Target platform model name the model will use for inference.
-        target_platform_version: Target platform capabilities version.
-
+        tpc_version (str): Target platform capabilities version.
+        device_type (str): The type of device for the target platform.
+        
     Returns:
-        A default TargetPlatformCapabilities object.
+        The TargetPlatformCapabilities object matching the tpc version.
     """
+    # Generate a function containing tpc configurations for the specified device type.
+    tpc_func = generate_tpc_func(device_type=device_type)
 
-    assert fw_name in [TENSORFLOW, PYTORCH], f"Unsupported framework {fw_name}."
+    # Get the target platform model for the version.
+    tpc_version = str(tpc_version)
+    tpc = tpc_func(tpc_version=tpc_version)
 
-    if target_platform_name == DEFAULT_TP_MODEL:
-        return get_tpc_imx500_v1()
+    return tpc
 
-    assert target_platform_version == 'v1' or target_platform_version is None, \
-        "The usage of get_target_platform_capabilities API is supported only with the default TPC ('v1')."
 
-    if target_platform_name == IMX500_TP_MODEL:
-        return get_tpc_imx500_v1()
-    elif target_platform_name == TFLITE_TP_MODEL:
-        return get_tpc_tflite_v1()
-    elif target_platform_name == QNNPACK_TP_MODEL:
-        return get_tpc_qnnpack_v1()
+def get_target_platform_capabilities_sdsp(sdsp_version: str = SDSP_V3_14) -> TargetPlatformCapabilities:
+    """
+    Retrieves target platform capabilities model based on sdsp converter version.
 
-    raise ValueError(f"Unsupported target platform name {target_platform_name}.")
+    Args:
+        sdsp_version (str): Sdsp converter version.
+        
+    Returns:
+        The TargetPlatformCapabilities object matching the sdsp converter version.
+    """
+    sdsp_version = str(sdsp_version)
+    # Get the corresponding tpc version from sdsp converter version.
+    sdsp_to_tpc_version = {
+        SDSP_V3_14: TPC_V1_0,
+        SDSP_V3_16: TPC_V4_0,
+        SDSP_V3_17: TPC_V5_0,
+    }
+
+    msg = (f"Error: The specified sdsp converter version '{sdsp_version}' is not valid. "
+        f"Available versions are: {', '.join(sdsp_to_tpc_version.keys())}. "
+        "Please ensure you are using a supported sdsp converter version.")
+    assert sdsp_version in sdsp_to_tpc_version, msg
+
+    tpc_version = sdsp_to_tpc_version.get(sdsp_version)
+
+    return get_target_platform_capabilities(tpc_version)
 
 
 def get_tpc_model(name: str, tpc: TargetPlatformCapabilities):
@@ -63,8 +73,8 @@ def get_tpc_model(name: str, tpc: TargetPlatformCapabilities):
     This is a utility method that just returns the TargetPlatformCapabilities that it receives, to support existing TPC API.
 
     Args:
-        name: the name of the TargetPlatformCapabilities (not used in this function).
-        tpc: a TargetPlatformCapabilities to return.
+        name (str): the name of the TargetPlatformCapabilities (not used in this function).
+        tpc (TargetPlatformCapabilities): a TargetPlatformCapabilities to return.
 
     Returns:
         The given TargetPlatformCapabilities object.

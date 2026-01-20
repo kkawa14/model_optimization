@@ -16,15 +16,21 @@
 # TP Model constants
 OPS_SET_LIST = 'ops_set_list'
 
-# Version
-LATEST = 'latest'
-
-
 # Supported TP models names:
-DEFAULT_TP_MODEL= 'default'
 IMX500_TP_MODEL = 'imx500'
 TFLITE_TP_MODEL = 'tflite'
 QNNPACK_TP_MODEL = 'qnnpack'
+
+# TPC versions.
+TPC_V1_0 = '1.0'
+TPC_V4_0 = '4.0'
+TPC_V5_0 = '5.0'
+TPC_V6_0 = '6.0'
+
+# SDSP converter versions
+SDSP_V3_14 = '3.14'
+SDSP_V3_16 = '3.16'
+SDSP_V3_17 = '3.17'
 
 # TP Attributes
 KERNEL_ATTR = "kernel_attr"
